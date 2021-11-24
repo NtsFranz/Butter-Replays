@@ -12,6 +12,7 @@ namespace Milk2
     class Program
     {
         public static string replayFile = @"C:\Users\Anton\Sync\rec_2021-11-13_00-00-32.echoreplay";
+        // public static string replayFile = @"C:\Users\Anton\Sync\rec_2021-11-12_23-48-58.echoreplay";
         
         static void Main(string[] args)
         {
