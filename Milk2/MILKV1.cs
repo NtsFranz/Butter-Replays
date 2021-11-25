@@ -2,8 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Milk2;
 
-namespace Milk2
+namespace Spark
 {
 	/// <summary>
 	/// 🥛🥛🥛🥛🥛
@@ -71,12 +72,15 @@ namespace Milk2
 
 				foreach (var team in frame.teams)
 				{
-					foreach (var player in team.players)
+					if (team.players != null)
 					{
-						players.Add(player.name);
-						numbers.Add(player.number);
-						levels.Add(player.level);
-						userids.Add(player.userid);
+						foreach (var player in team.players)
+						{
+							players.Add(player.name);
+							numbers.Add(player.number);
+							levels.Add(player.level);
+							userids.Add(player.userid);
+						}
 					}
 				}
 			}
@@ -85,14 +89,17 @@ namespace Milk2
 			{
 				foreach (var team in frame.teams)
 				{
-					foreach (var player in team.players)
+					if (team.players != null)
 					{
-						if (!userids.Contains(player.userid))
+						foreach (var player in team.players)
 						{
-							players.Add(player.name);
-							numbers.Add(player.number);
-							levels.Add(player.level);
-							userids.Add(player.userid);
+							if (!userids.Contains(player.userid))
+							{
+								players.Add(player.name);
+								numbers.Add(player.number);
+								levels.Add(player.level);
+								userids.Add(player.userid);
+							}
 						}
 					}
 				}
@@ -146,6 +153,7 @@ namespace Milk2
 
 			foreach (var team in frame.teams)
 			{
+				if (team.stats == null) team.stats = new g_TeamStats();
 				bytes.AddRange(BitConverter.GetBytes((byte)team.stats.points));
 				bytes.AddRange(BitConverter.GetBytes(team.stats.possession_time));
 				bytes.AddRange(BitConverter.GetBytes((byte)team.stats.interceptions));
@@ -159,20 +167,23 @@ namespace Milk2
 				bytes.AddRange(BitConverter.GetBytes((byte)team.stats.assists));
 				bytes.AddRange(BitConverter.GetBytes((byte)team.stats.shots_taken));
 
-				foreach (var player in team.players)
+				if (team.players != null)
 				{
-					bytes.AddRange(BitConverter.GetBytes((byte)player.stats.points));
-					bytes.AddRange(BitConverter.GetBytes(player.stats.possession_time));
-					bytes.AddRange(BitConverter.GetBytes((byte)player.stats.interceptions));
-					bytes.AddRange(BitConverter.GetBytes((byte)player.stats.blocks));
-					bytes.AddRange(BitConverter.GetBytes((byte)player.stats.steals));
-					bytes.AddRange(BitConverter.GetBytes((byte)player.stats.catches));
-					bytes.AddRange(BitConverter.GetBytes((byte)player.stats.passes));
-					bytes.AddRange(BitConverter.GetBytes((byte)player.stats.saves));
-					bytes.AddRange(BitConverter.GetBytes((byte)player.stats.goals));
-					bytes.AddRange(BitConverter.GetBytes((byte)player.stats.stuns));
-					bytes.AddRange(BitConverter.GetBytes((byte)player.stats.assists));
-					bytes.AddRange(BitConverter.GetBytes((byte)player.stats.shots_taken));
+					foreach (var player in team.players)
+					{
+						bytes.AddRange(BitConverter.GetBytes((byte)player.stats.points));
+						bytes.AddRange(BitConverter.GetBytes(player.stats.possession_time));
+						bytes.AddRange(BitConverter.GetBytes((byte)player.stats.interceptions));
+						bytes.AddRange(BitConverter.GetBytes((byte)player.stats.blocks));
+						bytes.AddRange(BitConverter.GetBytes((byte)player.stats.steals));
+						bytes.AddRange(BitConverter.GetBytes((byte)player.stats.catches));
+						bytes.AddRange(BitConverter.GetBytes((byte)player.stats.passes));
+						bytes.AddRange(BitConverter.GetBytes((byte)player.stats.saves));
+						bytes.AddRange(BitConverter.GetBytes((byte)player.stats.goals));
+						bytes.AddRange(BitConverter.GetBytes((byte)player.stats.stuns));
+						bytes.AddRange(BitConverter.GetBytes((byte)player.stats.assists));
+						bytes.AddRange(BitConverter.GetBytes((byte)player.stats.shots_taken));
+					}
 				}
 			}
 
@@ -212,43 +223,47 @@ namespace Milk2
 			// loop through all the player and add team- and player-specific info
 			foreach (var team in frame.teams)
 			{
-				foreach (var player in team.players)
+				if (team.players != null)
 				{
-					List<float>[] vectors = {
-						player.velocity,
-
-						player.head.position,
-						player.head.left,
-						player.head.up,
-						player.head.forward,
-
-						player.body.position,
-						player.body.left,
-						player.body.up,
-						player.body.forward,
-
-						player.lhand.pos,
-						player.lhand.left,
-						player.lhand.up,
-						player.lhand.forward,
-
-						player.rhand.pos,
-						player.rhand.left,
-						player.rhand.up,
-						player.rhand.forward
-					};
-
-					foreach (List<float> vector in vectors)
+					foreach (var player in team.players)
 					{
-						bytes.AddRange(vector.GetBytes());
+						List<float>[] vectors =
+						{
+							player.velocity,
+
+							player.head.position,
+							player.head.left,
+							player.head.up,
+							player.head.forward,
+
+							player.body.position,
+							player.body.left,
+							player.body.up,
+							player.body.forward,
+
+							player.lhand.pos,
+							player.lhand.left,
+							player.lhand.up,
+							player.lhand.forward,
+
+							player.rhand.pos,
+							player.rhand.left,
+							player.rhand.up,
+							player.rhand.forward
+						};
+
+						foreach (List<float> vector in vectors)
+						{
+							bytes.AddRange(vector.GetBytes());
+						}
+
+						bytes.AddRange(BitConverter.GetBytes(player.ping));
+
+						bools.Add(player.stunned);
+						bools.Add(player.invulnerable);
+						bools.Add(player.possession);
+						bools.Add(player.blocking);
 					}
-
-					bytes.AddRange(BitConverter.GetBytes(player.ping));
-
-					bools.Add(player.stunned);
-					bools.Add(player.invulnerable);
-					bools.Add(player.possession);
-					bools.Add(player.blocking);
 				}
 			}
 

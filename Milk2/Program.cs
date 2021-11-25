@@ -3,32 +3,62 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.Text.Json.Serialization;
-using System.Threading;
 using Newtonsoft.Json;
+using Spark;
 
 namespace Milk2
 {
-    class Program
+    internal static class Program
     {
-        public static string replayFile = @"C:\Users\Anton\Sync\rec_2021-11-13_00-00-32.echoreplay";
-        // public static string replayFile = @"C:\Users\Anton\Sync\rec_2021-11-12_23-48-58.echoreplay";
-        
-        static void Main(string[] args)
+        // private const string ReplayFile = @"C:\Users\Anton\Sync\Milk Testing\rec_2021-11-13_00-00-32.echoreplay";
+        private const string ReplayFile = @"C:\Users\Anton\Sync\Milk Testing\rec_2021-11-12_23-48-58.echoreplay";
+
+        private const string OutputFolder = @"C:\Users\Anton\Sync\Milk Testing";
+
+        private static void Main(string[] args)
         {
-            Console.WriteLine($"Reading file: {replayFile}");
+            Console.WriteLine($"Reading file: {ReplayFile}");
             Stopwatch sw = new Stopwatch();
             sw.Start();
-            StreamReader reader = new StreamReader(replayFile);
+            StreamReader reader = new StreamReader(ReplayFile);
 
-            var file = ReadReplayFile(reader);
+            List<g_Instance> file = ReadReplayFile(reader);
             // Thread loadThread = new Thread(() => ReadReplayFile(reader));
             // loadThread.Start();
             sw.Stop();
-
             Console.WriteLine($"Finished reading {file.Count:N0} lines in {sw.Elapsed.TotalSeconds:N3} seconds");
+            sw.Restart();
+            
+            Milk milkV1 = new Milk(file[0]);
+            file.ForEach(frame => { milkV1.AddFrame(frame); });
+            byte[] milkV1Bytes = milkV1.GetBytes();
+            
+            sw.Stop();
+            Console.WriteLine($"Finished converting to Milk V1 in {sw.Elapsed.TotalSeconds:N3} seconds");
+            sw.Restart();
+
+            MilkV2 milkV2 = new MilkV2();
+            file.ForEach(frame => { milkV2.AddFrame(frame); });
+            byte[] milkV2Bytes = milkV2.GetBytes();
+            
+            sw.Stop();
+            Console.WriteLine($"Finished converting to Milk V2 in {sw.Elapsed.TotalSeconds:N3} seconds");
+            sw.Restart();
+            
+            File.WriteAllBytes(
+                Path.Combine(OutputFolder, Path.GetFileNameWithoutExtension(ReplayFile) + ".milk"),
+                milkV1Bytes
+            );File.WriteAllBytes(
+                Path.Combine(OutputFolder, Path.GetFileNameWithoutExtension(ReplayFile) + ".milk2"),
+                milkV2Bytes
+            );
+            
+            sw.Stop();
+            Console.WriteLine($"Finished writing to file in {sw.Elapsed.TotalSeconds:N3} seconds");
+            sw.Restart();
+
         }
-        
+
         static List<g_Instance> ReadReplayFile(StreamReader fileReader)
         {
             bool fileFinishedReading = false;
@@ -37,7 +67,6 @@ namespace Milk2
 
             using (fileReader = OpenOrExtract(fileReader))
             {
-
                 while (!fileFinishedReading)
                 {
                     if (fileReader != null)
@@ -62,6 +91,7 @@ namespace Milk2
                                 Console.WriteLine("Row doesn't include both a time and API JSON");
                                 continue;
                             }
+
                             DateTime frameTime = DateTime.Parse(onlyTime);
 
                             // if this is actually valid arena data
@@ -85,7 +115,7 @@ namespace Milk2
 
             return readFrames;
         }
-        
+
         private static StreamReader OpenOrExtract(StreamReader reader)
         {
             char[] buffer = new char[2];
@@ -98,6 +128,7 @@ namespace Milk2
                 StreamReader ret = new StreamReader(archive.Entries[0].Open());
                 return ret;
             }
+
             return reader;
         }
     }

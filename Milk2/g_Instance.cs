@@ -41,6 +41,9 @@ namespace Milk2
 		public string map_name { get; set; }
 		public bool private_match { get; set; }
 		public int orange_points { get; set; }
+		public int total_round_count { get; set; }
+		public int blue_round_score { get; set; }
+		public int orange_round_score { get; set; }
 		public g_Playspace player { get; set; }
 		public g_Pause pause { get; set; }
 		/// <summary>
@@ -49,6 +52,10 @@ namespace Milk2
 		/// </summary>
 		public List<int> possession { get; set; }
 		public bool tournament_match { get; set; }
+		public float left_shoulder_pressed {get;set;}
+		public float right_shoulder_pressed {get;set;}
+		public float left_shoulder_pressed2 {get;set;} 
+		public float right_shoulder_pressed2 {get;set;}
 		public bool blue_team_restart_request { get; set; }
 		/// <summary>
 		/// Name of the oculus username recording.
@@ -247,6 +254,8 @@ namespace Milk2
 		public bool stunned { get; set; }
 		public int ping { get; set; }
 		public float packetlossratio { get; set; }
+		public string holding_left { get; set; }
+		public string holding_right { get; set; }
 		/// <summary>
 		/// Boolean of the player's invulnerability after being stunned.
 		/// </summary>
