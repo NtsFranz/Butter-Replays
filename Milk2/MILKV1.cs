@@ -153,7 +153,7 @@ namespace Spark
 
 			foreach (var team in frame.teams)
 			{
-				if (team.stats == null) team.stats = new g_TeamStats();
+				if (team.stats == null) team.stats = new g_Stats();
 				bytes.AddRange(BitConverter.GetBytes((byte)team.stats.points));
 				bytes.AddRange(BitConverter.GetBytes(team.stats.possession_time));
 				bytes.AddRange(BitConverter.GetBytes((byte)team.stats.interceptions));

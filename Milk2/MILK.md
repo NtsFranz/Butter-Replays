@@ -270,22 +270,23 @@ Example JSON:
 
 
 ### Player data
-67 bytes, or 81 bytes when the player stats are included
+55-81 bytes depending on what is included
 
 | Bytes | Value |
 | ----- | ---------|
 | 1  | Player index (for this file) |
 | 1  | `playerid` |
 | 1  | [Player state bitmask](#player-state-bitmask) |
-| 2  | Ping |
-| 2  | Packet loss ratio (half) |
-| 1  | [Holding](#holding-indices) Left. If holding a player, the userid is converted to the player's file id |
-| 1  | [Holding](#holding-indices) Right If holding a player, the userid is converted to the player's file id |
+| 2*  | Ping  (if included) |
+| 2*  | Packet loss ratio (half)  (if included)|
+| 1*  | [Holding](#holding-indices) Left. If holding a player, the userid is converted to the player's file id (if included) |
+| 1*  | [Holding](#holding-indices) Right If holding a player, the userid is converted to the player's file id  (if included) |
+| 1  | [Player pose bitmask](#player-pose-bitmask) |
 | 13 | Head [Pose](#pose)
 | 13 | Body [Pose](#pose)
 | 13 | Left Hand [Pose](#pose)
 | 13 | Right Hand [Pose](#pose)
-| 6  | Velocity
+| 6*  | Velocity (if included)
 | 14*| Player [Stats](#stats) (if included) 
 
 
@@ -299,8 +300,21 @@ Possession, Blocking, Stunned, Invulnerable
 | 2     | `stunned` |
 | 3     | `invulnerable` |
 | 4     | Contains changed stats |
-| 5-7   | unused |
+| 5     | Contains changed ping/packetlossratio |
+| 6     | Contains changed holding_left/right |
+| 7     | Contains changed velocity |
 
+### Player pose bitmask
+| Bit number | Field name |
+| ---------- | -----------|
+| 0     | Head position changed |
+| 1     | Body position changed |
+| 2     | LHand position changed |
+| 3     | RHand position changed |
+| 4     | unused |
+| 5     | unused |
+| 6     | unused |
+| 7     | unused |
 
 ### Holding indices
 

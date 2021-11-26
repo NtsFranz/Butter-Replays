@@ -2,6 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+// ReSharper disable InconsistentNaming
+// ReSharper disable UnusedAutoPropertyAccessor.Global
+// ReSharper disable UnusedMember.Global
+// ReSharper disable MemberCanBePrivate.Global
+// ReSharper disable PropertyCanBeMadeInitOnly.Global
+// ReSharper disable UnassignedField.Global
+// ReSharper disable ClassNeverInstantiated.Global
 
 namespace Milk2
 {
@@ -68,14 +75,11 @@ namespace Milk2
 		public g_Score last_score { get; set; }
 		public List<g_Team> teams { get; set; }
 
-		public List<g_Team> playerTeams {
-			get {
-				return new List<g_Team>
-				{
-					teams[0], teams[1]
-				};
-			}
-		}
+		public List<g_Team> playerTeams =>
+			new List<g_Team>
+			{
+				teams[0], teams[1]
+			};
 
 		/// <summary>
 		/// Gets all the g_Player objects from both teams
@@ -99,14 +103,13 @@ namespace Milk2
 		/// <returns></returns>
 		public g_Player GetPlayer(string name)
 		{
-			foreach (var team in teams)
+			foreach (g_Team t in teams)
 			{
-				foreach (var player in team.players)
+				foreach (g_Player p in t.players)
 				{
-					if (player.name == name) return player;
+					if (p.name == name) return p;
 				}
 			}
-
 			return null;
 		}
 
@@ -117,11 +120,11 @@ namespace Milk2
 		/// <returns></returns>
 		public g_Player GetPlayer(long userid)
 		{
-			foreach (var team in teams)
+			foreach (var t in teams)
 			{
-				foreach (var player in team.players)
+				foreach (var p in t.players)
 				{
-					if (player.userid == userid) return player;
+					if (p.userid == userid) return p;
 				}
 			}
 
@@ -130,11 +133,11 @@ namespace Milk2
 		
 		public g_Team GetTeam(string player_name)
 		{
-			foreach (g_Team team in teams)
+			foreach (g_Team t in teams)
 			{
-				foreach (g_Player player in team.players)
+				foreach (g_Player p in t.players)
 				{
-					if (player.name == player_name) return team;
+					if (p.name == player_name) return t;
 				}
 			}
 
@@ -143,11 +146,11 @@ namespace Milk2
 
 		public g_Team GetTeam(long userid)
 		{
-			foreach (g_Team team in teams)
+			foreach (g_Team t in teams)
 			{
-				foreach (g_Player player in team.players)
+				foreach (g_Player p in t.players)
 				{
-					if (player.userid == userid) return team;
+					if (p.userid == userid) return t;
 				}
 			}
 
@@ -156,11 +159,11 @@ namespace Milk2
 
 		public g_Team.TeamColor GetTeamColor(long userid)
 		{
-			foreach (g_Team team in teams)
+			foreach (g_Team t in teams)
 			{
-				foreach (g_Player player in team.players)
+				foreach (g_Player p in t.players)
 				{
-					if (player.userid == userid) return team.color;
+					if (p.userid == userid) return t.color;
 				}
 			}
 
@@ -245,7 +248,7 @@ namespace Milk2
 		/// <summary>
 		/// Object describing a player's aggregated statistics throughout the match.
 		/// </summary>
-		public g_PlayerStats stats { get; set; }
+		public g_Stats stats { get; set; }
 		public int number { get; set; }
 		public int level { get; set; }
 		/// <summary>
@@ -307,7 +310,7 @@ namespace Milk2
 	/// <summary>
 	/// Object containing the player's stats in the match.
 	/// </summary>
-	public class g_PlayerStats
+	public class g_Stats
 	{
 		public float possession_time { get; set; }
 		public int points { get; set; }
@@ -322,9 +325,9 @@ namespace Milk2
 		public int assists { get; set; }
 		public int shots_taken { get; set; }
 
-		public static g_PlayerStats operator +(g_PlayerStats a, g_PlayerStats b)
+		public static g_Stats operator +(g_Stats a, g_Stats b)
 		{
-			g_PlayerStats pStats = new g_PlayerStats
+			g_Stats stats = new g_Stats
 			{
 				possession_time = a.possession_time + b.possession_time,
 				points = a.points + b.points,
@@ -339,12 +342,12 @@ namespace Milk2
 				goals = a.goals + b.goals,
 				shots_taken = a.shots_taken + b.shots_taken
 			};
-			return pStats;
+			return stats;
 		}
 
-		public static g_PlayerStats operator -(g_PlayerStats a, g_PlayerStats b)
+		public static g_Stats operator -(g_Stats a, g_Stats b)
 		{
-			g_PlayerStats pStats = new g_PlayerStats
+			g_Stats stats = new g_Stats
 			{
 				possession_time = a.possession_time - b.possession_time,
 				points = a.points - b.points,
@@ -359,40 +362,10 @@ namespace Milk2
 				goals = a.goals - b.goals,
 				shots_taken = a.shots_taken - b.shots_taken
 			};
-			return pStats;
+			return stats;
 		}
 	}
 
-	/// <summary>
-	/// Object containing the total statistics for the entire team so far.
-	/// </summary>
-	public class g_TeamStats
-	{
-		public int points { get; set; }
-		public float possession_time { get; set; }
-		/// <summary>
-		/// (Currently Broken in the API)
-		/// </summary>
-		public int interceptions { get; set; }
-		/// <summary>
-		/// (Currently Broken in the API)
-		/// </summary>
-		public int blocks { get; set; }
-		public int steals { get; set; }
-		/// <summary>
-		/// (Currently Broken in the API)
-		/// </summary>
-		public int catches { get; set; }
-		/// <summary>
-		/// (Currently Broken in the API)
-		/// </summary>
-		public int passes { get; set; }
-		public int saves { get; set; }
-		public int goals { get; set; }
-		public int stuns { get; set; }
-		public int assists { get; set; }
-		public int shots_taken { get; set; }
-	}
 
 	/// <summary>
 	/// Object Containing basic team information and team stats
@@ -411,7 +384,7 @@ namespace Milk2
 		/// </summary>
 		public string team { get; set; }
 		public bool possession { get; set; }
-		public g_TeamStats stats { get; set; }
+		public g_Stats stats { get; set; }
 
 		/// <summary>
 		/// Not in the API, but add as soon as this frame is deserialized
@@ -419,13 +392,9 @@ namespace Milk2
 		public TeamColor color { get; set; }
 
 		public List<string> player_names {
-			get {
-				var list = new List<string>();
-				foreach (var p in players)
-				{
-					list.Add(p.name);
-				}
-				return list;
+			get
+			{
+				return players.Select(p => p.name).ToList();
 			}
 		}
 	}
@@ -466,11 +435,11 @@ namespace Milk2
 		{
 			int hash = 17;
 			hash = hash * 23 + disc_speed.GetHashCode();
-			hash = hash * 23 + goal_type.GetHashCode();
-			hash = hash * 23 + point_amount.GetHashCode();
-			hash = hash * 23 + distance_thrown.GetHashCode();
-			hash = hash * 23 + person_scored.GetHashCode();
-			hash = hash * 23 + assist_scored.GetHashCode();
+			hash = hash * 29 + goal_type.GetHashCode();
+			hash = hash * 31 + point_amount.GetHashCode();
+			hash = hash * 37 + distance_thrown.GetHashCode();
+			hash = hash * 41 + person_scored.GetHashCode();
+			hash = hash * 43 + assist_scored.GetHashCode();
 			return hash;
 		}
 	}
