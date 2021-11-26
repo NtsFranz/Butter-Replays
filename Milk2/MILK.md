@@ -48,8 +48,8 @@ Below is the bit flags structure for the Map Byte
 | 7     | mpl_tutorial_arena |
 
 ## Keyframes
-In general, data for each frame in this format is only stored as a diff of the previous frame, however, a full reset happens every N frames. This allows decompression of partial replays and streaming.
-The start of a keyframe is denoted by the `0xFEFE` header. 
+In general, data for each frame in this format is only stored as a diff of the previous frame, however, a full reset happens every N frames. This allows decompression of partial replays and streaming, as well as prevents precision errors from building up over time.
+The start of a keyframe is denoted by the `0xFEFE` header instead of the normal `0xFEFC` header. 
 
 
 ## Frames
