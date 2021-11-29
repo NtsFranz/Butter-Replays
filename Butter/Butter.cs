@@ -2,30 +2,29 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using System.Security.Cryptography;
 using System.Text;
 
-namespace Milk2
+namespace Butter
 {
     /// <summary>
     /// 🥛🥛🥛🥛🥛
     /// </summary>
-    public class MilkV2
+    public class Butter
     {
         public const byte FORMAT_VERSION = 3;
         public const ushort KEYFRAME_INTERVAL = 30;
 
-        private MilkFileHeader fileHeader;
-        private List<MilkFrame> frames;
+        private ButterFileHeader fileHeader;
+        private List<ButterFrame> frames;
 
         public static int includedCount = 0;
         public static int excludedCount = 0;
 
-        public MilkV2()
+        public Butter()
         {
         }
 
-        public MilkV2(g_Instance frame)
+        public Butter(g_Instance frame)
         {
             AddFrame(frame);
         }
@@ -93,7 +92,7 @@ namespace Milk2
             // TODO contains more
         }
 
-        public class MilkFileHeader
+        public class ButterFileHeader
         {
             private g_Instance firstFrame;
 
@@ -102,7 +101,7 @@ namespace Milk2
             private List<int> levels;
             private List<long> userids;
 
-            public MilkFileHeader(g_Instance firstFrame)
+            public ButterFileHeader(g_Instance firstFrame)
             {
                 this.firstFrame = firstFrame;
 
@@ -245,11 +244,11 @@ namespace Milk2
         }
 
 
-        public class MilkFrame
+        public class ButterFrame
         {
             private g_Instance frame;
-            public MilkFrame lastMilkFrame;
-            private MilkFileHeader milkHeader;
+            public ButterFrame lastButterFrame;
+            private ButterFileHeader butterHeader;
 
 
             private byte _gameStatusByte;
@@ -262,22 +261,22 @@ namespace Milk2
             private byte[] _discBytes;
 
             /// <summary>
-            /// Creates a new Milk frame from a decompressed frame class
+            /// Creates a new Butter frame from a decompressed frame class
             /// </summary>
             /// <param name="frame">The original data</param>
-            /// <param name="lastMilkFrame">Previous milk frame to do diffs with. Pass in null to avoid diffs</param>
-            /// <param name="milkHeader">The milk header, which contains player dictionaries</param>
-            public MilkFrame(g_Instance frame, MilkFrame lastMilkFrame, MilkFileHeader milkHeader)
+            /// <param name="lastButterFrame">Previous butter frame to do diffs with. Pass in null to avoid diffs</param>
+            /// <param name="butterHeader">The butter header, which contains player dictionaries</param>
+            public ButterFrame(g_Instance frame, ButterFrame lastButterFrame, ButterFileHeader butterHeader)
             {
                 this.frame = frame;
-                this.lastMilkFrame = lastMilkFrame;
-                this.milkHeader = milkHeader;
+                this.lastButterFrame = lastButterFrame;
+                this.butterHeader = butterHeader;
             }
 
             public byte[] GetBytes()
             {
                 List<byte> bytes = new List<byte>();
-                if (lastMilkFrame == null)
+                if (lastButterFrame == null)
                 {
                     bytes.Add(0xFE);
                     bytes.Add(0xFC);
@@ -288,26 +287,26 @@ namespace Milk2
                     bytes.Add(0xFE);
                 }
 
-                bytes.AddRange(BitConverter.GetBytes((Half)(frame.game_clock - lastMilkFrame?.frame.game_clock ?? 0)));
+                bytes.AddRange(
+                    BitConverter.GetBytes((Half)(frame.game_clock - lastButterFrame?.frame.game_clock ?? 0)));
                 byte inclusionBitmask = 0;
                 inclusionBitmask +=
-                    (byte)((frame.game_status != lastMilkFrame?.frame.game_status ? 1 : 0) << 0); // game_status
+                    (byte)((frame.game_status != lastButterFrame?.frame.game_status ? 1 : 0) << 0); // game_status
                 inclusionBitmask +=
-                    (byte)((frame.blue_points != lastMilkFrame?.frame.blue_points ||
-                            frame.orange_points != lastMilkFrame.frame.orange_points
-                        ? 1
-                        : 0) << 1); // blue or orange points
+                    (byte)((frame.blue_points != lastButterFrame?.frame.blue_points ||
+                            frame.orange_points != lastButterFrame.frame.orange_points
+                        ? 1 : 0) << 1); // blue or orange points
                 inclusionBitmask +=
-                    (byte)((PauseAndRestartsBytes.SameAs(lastMilkFrame?.PauseAndRestartsBytes) ? 0 : 1) <<
+                    (byte)((PauseAndRestartsBytes.SameAs(lastButterFrame?.PauseAndRestartsBytes) ? 0 : 1) <<
                            2); // pause and restarts
-                inclusionBitmask += (byte)((InputBytes.SameAs(lastMilkFrame?.InputBytes) ? 0 : 1) << 3); // inputs
+                inclusionBitmask += (byte)((InputBytes.SameAs(lastButterFrame?.InputBytes) ? 0 : 1) << 3); // inputs
                 inclusionBitmask +=
-                    (byte)((LastScoreBytes.SameAs(lastMilkFrame?.LastScoreBytes) ? 0 : 1) << 4); // Last Score
+                    (byte)((LastScoreBytes.SameAs(lastButterFrame?.LastScoreBytes) ? 0 : 1) << 4); // Last Score
                 inclusionBitmask +=
-                    (byte)((LastThrowBytes.SameAs(lastMilkFrame?.LastThrowBytes) ? 0 : 1) << 5); // last throw
+                    (byte)((LastThrowBytes.SameAs(lastButterFrame?.LastThrowBytes) ? 0 : 1) << 5); // last throw
                 inclusionBitmask +=
-                    (byte)((VrPlayerBytes.SameAs(lastMilkFrame?.VrPlayerBytes) ? 0 : 1) << 6); // vr player
-                inclusionBitmask += (byte)((DiscBytes.SameAs(lastMilkFrame?.DiscBytes) ? 0 : 1) << 7); // disc
+                    (byte)((VrPlayerBytes.SameAs(lastButterFrame?.VrPlayerBytes) ? 0 : 1) << 6); // vr player
+                inclusionBitmask += (byte)((DiscBytes.SameAs(lastButterFrame?.DiscBytes) ? 0 : 1) << 7); // disc
                 bytes.Add(inclusionBitmask);
 
 
@@ -345,8 +344,7 @@ namespace Milk2
                 {
                     bytes.AddRange(LastThrowBytes);
                 }
-
-
+                
                 // VR Player
                 if ((inclusionBitmask & (1 << 6)) == 1)
                 {
@@ -366,11 +364,11 @@ namespace Milk2
                 // Team stats included
                 bool[] teamStatsIncluded = new bool[3];
                 teamStatsIncluded[0] = frame.teams[0]?.stats != null && !StatsBytes(frame.teams[0].stats)
-                    .SameAs(StatsBytes(lastMilkFrame?.frame.teams[0].stats));
+                    .SameAs(StatsBytes(lastButterFrame?.frame.teams[0].stats));
                 teamStatsIncluded[1] = frame.teams[1]?.stats != null && !StatsBytes(frame.teams[1].stats)
-                    .SameAs(StatsBytes(lastMilkFrame?.frame.teams[1].stats));
+                    .SameAs(StatsBytes(lastButterFrame?.frame.teams[1].stats));
                 teamStatsIncluded[2] = frame.teams[2]?.stats != null && !StatsBytes(frame.teams[2].stats)
-                    .SameAs(StatsBytes(lastMilkFrame?.frame.teams[2].stats));
+                    .SameAs(StatsBytes(lastButterFrame?.frame.teams[2].stats));
                 teamDataBitmask |= (byte)((byte)(teamStatsIncluded[0] ? 1 : 0) << 2);
                 teamDataBitmask |= (byte)((byte)(teamStatsIncluded[1] ? 1 : 0) << 3);
                 teamDataBitmask |= (byte)((byte)(teamStatsIncluded[2] ? 1 : 0) << 4);
@@ -382,7 +380,7 @@ namespace Milk2
                 {
                     if (teamStatsIncluded[i])
                     {
-                        bytes.AddRange(StatsBytes(frame.teams[i].stats, lastMilkFrame?.frame.teams[i].stats));
+                        bytes.AddRange(StatsBytes(frame.teams[i].stats, lastButterFrame?.frame.teams[i].stats));
                     }
 
                     bytes.Add((byte)(frame.teams[i]?.players?.Count ?? 0));
@@ -390,10 +388,10 @@ namespace Milk2
                     {
                         foreach (g_Player player in frame.teams[i].players)
                         {
-                            bytes.Add(milkHeader.GetPlayerIndex(player.name));
+                            bytes.Add(butterHeader.GetPlayerIndex(player.name));
                             bytes.Add((byte)player.playerid);
 
-                            g_Player lastFramePlayer = lastMilkFrame?.frame.GetPlayer(player.name);
+                            g_Player lastFramePlayer = lastButterFrame?.frame.GetPlayer(player.name);
 
                             Vector3 vel = player.velocity.ToVector3() - lastFramePlayer?.velocity.ToVector3() ??
                                           Vector3.Zero;
@@ -513,11 +511,11 @@ namespace Milk2
                             frame.disc.position.ToVector3(),
                             frame.disc.forward.ToVector3(),
                             frame.disc.up.ToVector3(),
-                            lastMilkFrame?.frame.disc.position.ToVector3()
+                            lastButterFrame?.frame.disc.position.ToVector3()
                         ));
 
                         bytes.AddRange(
-                            (frame.disc.velocity.ToVector3() - lastMilkFrame?.frame.disc.velocity.ToVector3() ??
+                            (frame.disc.velocity.ToVector3() - lastButterFrame?.frame.disc.velocity.ToVector3() ??
                              Vector3.Zero).GetHalfBytes());
 
                         _discBytes = bytes.ToArray();
@@ -539,7 +537,7 @@ namespace Milk2
                             frame.player.vr_position.ToVector3(),
                             frame.player.vr_forward.ToVector3(),
                             frame.player.vr_up.ToVector3(),
-                            lastMilkFrame?.frame.player.vr_position.ToVector3()
+                            lastButterFrame?.frame.player.vr_position.ToVector3()
                         ));
 
                         _vrPlayerBytes = bytes.ToArray();
@@ -593,8 +591,8 @@ namespace Milk2
                         b |= (byte)((byte)type << 3);
                         bytes.Add(b);
 
-                        bytes.Add(milkHeader.GetPlayerIndex(frame.last_score.person_scored));
-                        bytes.Add(milkHeader.GetPlayerIndex(frame.last_score.assist_scored));
+                        bytes.Add(butterHeader.GetPlayerIndex(frame.last_score.person_scored));
+                        bytes.Add(butterHeader.GetPlayerIndex(frame.last_score.assist_scored));
                         bytes.AddRange(BitConverter.GetBytes((Half)frame.last_score.disc_speed));
                         bytes.AddRange(BitConverter.GetBytes((Half)frame.last_score.distance_thrown));
                         _lastScoreBytes = bytes.ToArray();
@@ -612,13 +610,13 @@ namespace Milk2
                     {
                         List<byte> bytes = new List<byte>();
                         bytes.AddRange(BitConverter.GetBytes(
-                            (Half)(frame.left_shoulder_pressed - lastMilkFrame?.frame.left_shoulder_pressed ?? 0)));
+                            (Half)(frame.left_shoulder_pressed - lastButterFrame?.frame.left_shoulder_pressed ?? 0)));
                         bytes.AddRange(BitConverter.GetBytes((Half)(frame.right_shoulder_pressed -
-                            lastMilkFrame?.frame.right_shoulder_pressed ?? 0)));
+                            lastButterFrame?.frame.right_shoulder_pressed ?? 0)));
                         bytes.AddRange(BitConverter.GetBytes((Half)(frame.left_shoulder_pressed2 -
-                            lastMilkFrame?.frame.left_shoulder_pressed2 ?? 0)));
+                            lastButterFrame?.frame.left_shoulder_pressed2 ?? 0)));
                         bytes.AddRange(BitConverter.GetBytes((Half)(frame.right_shoulder_pressed2 -
-                            lastMilkFrame?.frame.right_shoulder_pressed2 ?? 0)));
+                            lastButterFrame?.frame.right_shoulder_pressed2 ?? 0)));
                         _inputBytes = bytes.ToArray();
                     }
 
@@ -642,9 +640,9 @@ namespace Milk2
                         bytes.Add(pauses);
 
                         bytes.AddRange(BitConverter.GetBytes(
-                            (Half)(frame.pause.paused_timer - lastMilkFrame?.frame.pause.paused_timer ?? 0)));
+                            (Half)(frame.pause.paused_timer - lastButterFrame?.frame.pause.paused_timer ?? 0)));
                         bytes.AddRange(BitConverter.GetBytes(
-                            (Half)(frame.pause.unpaused_timer - lastMilkFrame?.frame.pause.unpaused_timer ?? 0)));
+                            (Half)(frame.pause.unpaused_timer - lastButterFrame?.frame.pause.unpaused_timer ?? 0)));
                         _pauseAndRestartsBytes = bytes.ToArray();
                     }
 
@@ -690,7 +688,7 @@ namespace Milk2
                     "none" => 255,
                     "geo" => 254,
                     "disc" => 253,
-                    _ => milkHeader.GetPlayerIndex(long.Parse(holding))
+                    _ => butterHeader.GetPlayerIndex(long.Parse(holding))
                 };
             }
 
@@ -872,37 +870,49 @@ namespace Milk2
             // if there is no data yet, add this frame to the file header
             if (fileHeader == null)
             {
-                fileHeader = new MilkFileHeader(frame);
-                frames = new List<MilkFrame>();
+                fileHeader = new ButterFileHeader(frame);
+                frames = new List<ButterFrame>();
             }
             else
             {
                 fileHeader.ConsiderNewFrame(frame);
             }
 
-            MilkFrame milkFrame = new MilkFrame(
+            ButterFrame butterFrame = new ButterFrame(
                 frame,
                 // if on a keyframe interval and previous frames exist
                 (frames.Count % KEYFRAME_INTERVAL != 0) && frames.Count > 0 ? frames.Last() : null,
                 fileHeader
             );
 
-            frames.Add(milkFrame);
+            frames.Add(butterFrame);
         }
 
         public byte[] GetBytes()
         {
             List<byte> bytes = new List<byte>();
             bytes.AddRange(fileHeader.GetBytes());
-            foreach (MilkFrame frame in frames)
+            double byteTotal = 0;
+            foreach (ButterFrame frame in frames)
             {
-                bytes.AddRange(frame.GetBytes());
+                byte[] newBytes = frame.GetBytes();
+                bytes.AddRange(newBytes);
+                byteTotal += newBytes.Length;
             }
+
+            Console.WriteLine();
+
+            Console.WriteLine($"Average frame size:\t{byteTotal / frames.Count:N1} bytes");
 
             Console.WriteLine($"Included:\t{includedCount:N0}");
             Console.WriteLine($"Excluded:\t{excludedCount:N0}");
 
             return bytes.ToArray();
+        }
+
+        public Butter FromBytes(byte[] bytes)
+        {
+            
         }
     }
 

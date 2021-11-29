@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Numerics;
 
-namespace Milk2
+namespace Butter
 {
     [Serializable]
     public class Game

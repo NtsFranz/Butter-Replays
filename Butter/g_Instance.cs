@@ -10,7 +10,7 @@ using System.Numerics;
 // ReSharper disable UnassignedField.Global
 // ReSharper disable ClassNeverInstantiated.Global
 
-namespace Milk2
+namespace Butter
 {
 	/// <summary>
 	/// A recreation of the JSON object given by EchoVR
