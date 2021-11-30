@@ -41,7 +41,7 @@ namespace Spark
 			public List<string> players;
 			public List<int> numbers;
 			public List<int> levels;
-			public List<long> userids;
+			public List<ulong> userids;
 			public byte headerByte;
 
 			public MilkFileHeader(g_Instance frame)
@@ -68,13 +68,13 @@ namespace Spark
 				players = new List<string>();
 				numbers = new List<int>();
 				levels = new List<int>();
-				userids = new List<long>();
+				userids = new List<ulong>();
 
-				foreach (var team in frame.teams)
+				foreach (g_Team team in frame.teams)
 				{
 					if (team.players != null)
 					{
-						foreach (var player in team.players)
+						foreach (g_Player player in team.players)
 						{
 							players.Add(player.name);
 							numbers.Add(player.number);
@@ -87,11 +87,11 @@ namespace Spark
 
 			public void ConsiderNewFrame(g_Instance frame)
 			{
-				foreach (var team in frame.teams)
+				foreach (g_Team team in frame.teams)
 				{
 					if (team.players != null)
 					{
-						foreach (var player in team.players)
+						foreach (g_Player player in team.players)
 						{
 							if (!userids.Contains(player.userid))
 							{
@@ -367,7 +367,7 @@ namespace Spark
 				{
 					if (values.Count > b * 8 + bit)
 					{
-						currentByte |= (byte)(values[b * 8 + bit] ? 1 : 0 << bit);
+						currentByte |= (byte)((values[b * 8 + bit] ? 1 : 0) << bit);
 					}
 				}
 				bytes.Add(currentByte);

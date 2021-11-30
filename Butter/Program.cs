@@ -66,6 +66,48 @@ namespace Butter
             sw.Stop();
             Console.WriteLine($"Finished writing to file in {sw.Elapsed.TotalSeconds:N3} seconds");
             sw.Restart();
+
+            BinaryReader binaryReader = new BinaryReader(File.OpenRead(Path.Combine(outputFolder, Path.GetFileNameWithoutExtension(replayFile) + ".butter")));
+            List<g_Instance> rereadReplay = Butter.FromBytes(binaryReader);
+            
+            sw.Stop();
+            Console.WriteLine($"Finished reading from butter file in {sw.Elapsed.TotalSeconds:N3} seconds");
+            sw.Restart();
+
+            SaveReplay(Path.Combine(outputFolder, Path.GetFileNameWithoutExtension(replayFile) + "_processed.echoreplay"), rereadReplay);
+            
+            sw.Stop();
+            Console.WriteLine($"Finished writing to .echoreplay file in {sw.Elapsed.TotalSeconds:N3} seconds");
+            sw.Restart();
+        }
+        
+        
+        public static void SaveReplay(string fileName, List<g_Instance> frames)
+        {
+            // write the frames directly into a zip
+            using MemoryStream memoryStream = new MemoryStream();
+            using (ZipArchive archive = new ZipArchive(memoryStream, ZipArchiveMode.Create, true))
+            {
+                ZipArchiveEntry zipContents = archive.CreateEntry(Path.GetFileName(fileName));
+
+                using (Stream entryStream = zipContents.Open())
+                {
+                    using (StreamWriter streamWriter = new StreamWriter(entryStream))
+                    {
+                        foreach (g_Instance f in frames)
+                        {
+                            string s = JsonConvert.SerializeObject(f);
+                            streamWriter.WriteLine(s);
+                        }
+                    }
+                }
+            }
+
+            using (FileStream fileStream = new FileStream(fileName, FileMode.Create))
+            {
+                memoryStream.Seek(0, SeekOrigin.Begin);
+                memoryStream.CopyTo(fileStream);
+            }
         }
 
 

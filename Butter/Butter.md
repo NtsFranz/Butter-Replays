@@ -17,7 +17,7 @@
 | 16 | `sessionid` Session ids are made of 5 hexadecimal words, containing 8-4-4-4-12 digits each, so 32 hexadecimal digits makes 16 bytes |
 | 4  | `sessionip` IPv4 addresses can be stored as 4 bytes |
 | 1  | Total number of players in this file. Since players can join or leave, this can be more than 15.
-| (2-20)*n | ASCII array of player names separated by null bytes, where n=number of players in the match at any time. |
+| (2-20)*n | ASCII array of null-terminated player names, where n=number of players in the match at any time. |
 | 8*n | Player `userid`s |
 | 1*n | Player `number`s |
 | 1*n | Player `level`s |
@@ -25,6 +25,42 @@
 | .5  | `blue_round_score`   << 0 |
 | .5  | `orange_round_score` << 4 |
 | 1   | [Map Byte](#map-byte) (described below) |
+
+
+## Keyframes
+In general, data for each frame in this format is only stored as a diff of the previous frame, however, a full reset happens every N frames. This allows decompression of partial replays and streaming, as well as prevents precision errors from building up over time. Keyframe intervals can be customized depending on the recording rate and use case, but keyframes cannot be spaced more than 1 minute of real time apart due to the timestamp encoding. If there is more than 1 minute between keyframes, a keyframe should automatically be inserted.
+The start of a keyframe is denoted by the `0xFEFE` header instead of the normal `0xFEFC` header. 
+
+
+## Frames
+Each frame represents the data retrieved from a single call to the game's API. Any numerical value in a frame is only stored as the difference from the previous frame, except for keyframes.
+
+### Frame Size
+Below are estimated sizes for each frame. To get approximate full uncompressed file size, multiply the number by the number of frames. Average frame sizes are around 380 bytes experimentally.
+
+|               | Min   | Max (8 players) |
+| -----         | ----  | ----- |
+| Keyframe      | 28    | 1112  |
+| Normal Frame  | 23    | 1106  |
+
+### Frame Data
+| Bytes | Data |
+| ----- | ---- |
+| 2     | `0xFEFC` static header |
+| 2,8   | Unix time in milliseconds (keyframe), or milliseconds since last keyframe. |
+| 2     | `game_clock` half-precision float |
+| 1     | [Inclusion bitmask](#inclusion-bitmask)
+| 1*    | `game_status` See [Game Status](#game-status-coding) table |
+| 1*    | `blue_points` |
+| 1*    | `orange_points` |
+| 5*    | [Pause and Restarts](#pause-and-restarts). |
+| 8*    | [Inputs](#inputs). |
+| 7*    | [Last Score](#last-score) No continuous data |
+| 26*   | [Last Throw](#last-throw) No continuous data |
+| 13*   | [VR Player](#vr-player)  |
+| 19*   | [Disc](#disc)  |
+| 1     | [Team data bitmask](#team-data-bitmask) |
+| ??*3  | [Team data](#team-data) (includes player data) |
 
 #### Map Byte
 Below is the bit flags structure for the Map Byte
@@ -47,31 +83,6 @@ Below is the bit flags structure for the Map Byte
 | 6     | mpl_combat_gauss |
 | 7     | mpl_tutorial_arena |
 
-## Keyframes
-In general, data for each frame in this format is only stored as a diff of the previous frame, however, a full reset happens every N frames. This allows decompression of partial replays and streaming, as well as prevents precision errors from building up over time.
-The start of a keyframe is denoted by the `0xFEFE` header instead of the normal `0xFEFC` header. 
-
-
-## Frames
-Each frame represents the data retrieved from a single call to the game's API. Any numerical value in a frame is only stored as the difference from the previous frame, except for keyframes.
-
-### Frame Data
-| Bytes | Data |
-| ----- | ---- |
-| 2 | `0xFEFC` static header |
-| 2 | `game_clock` half-precision float |
-| 1 | [Inclusion bitmask](#inclusion-bitmask)
-| 1 | `game_status` See [Game Status](#game-status-coding) table |
-| 1 | `blue_points` |
-| 1 | `orange_points` |
-| 5 | [Pause and Restarts](#pause-and-restarts). |
-| 8 | [Inputs](#inputs). |
-| 7 | [Last Score](#last-score) No continuous data |
-| 26| [Last Throw](#last-throw) No continuous data |
-| 13| [VR Player](#vr-player)  |
-| 19| [Disc](#disc)  |
-| 1 | [Team data bitmask](#team-data-bitmask) |
-| ??*3 | [Team data](#team-data) |
 
 ### Inclusion bitmask
 | Bit | Value |
@@ -226,12 +237,17 @@ The orientation is converted to a Quaternion, then the component with the smalle
 | 7     | unused |
 
 
+### Team data size
+| Min  | Max (4 players)| Max (5 players)|
+| ---- | -----          | -----          |
+| 5    | 339            | 420            |
+
 ### Team data
 | Bytes | Value |
 | ----- | ---------|
-| 14 | Team [Stats](#stats) |
-| 1  | Number of players on team (K) |
-| (67 or 81) * K | [Player data](#player-data) |
+| 14*   | Team [Stats](#stats) |
+| 1     | Number of players on team (K) |
+| (4 to 81) * K | [Player data](#player-data) |
 
 ### Stats
 Example JSON:
@@ -270,24 +286,24 @@ Example JSON:
 
 
 ### Player data
-55-81 bytes depending on what is included
+4-81 bytes depending on what is included
 
 | Bytes | Value |
 | ----- | ---------|
 | 1  | Player index (for this file) |
 | 1  | `playerid` |
 | 1  | [Player state bitmask](#player-state-bitmask) |
+| 14*| Player [Stats](#stats) (if included) 
 | 2*  | Ping  (if included) |
 | 2*  | Packet loss ratio (half)  (if included)|
 | 1*  | [Holding](#holding-indices) Left. If holding a player, the userid is converted to the player's file id (if included) |
 | 1*  | [Holding](#holding-indices) Right If holding a player, the userid is converted to the player's file id  (if included) |
-| 1  | [Player pose bitmask](#player-pose-bitmask) |
-| 13 | Head [Pose](#pose)
-| 13 | Body [Pose](#pose)
-| 13 | Left Hand [Pose](#pose)
-| 13 | Right Hand [Pose](#pose)
 | 6*  | Velocity (if included)
-| 14*| Player [Stats](#stats) (if included) 
+| 1  | [Player pose bitmask](#player-pose-bitmask) |
+| 13* | Head [Pose](#pose)
+| 13* | Body [Pose](#pose)
+| 13* | Left Hand [Pose](#pose)
+| 13* | Right Hand [Pose](#pose)
 
 
 ### Player state bitmask

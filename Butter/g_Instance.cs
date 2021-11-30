@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using Newtonsoft.Json;
+
 // ReSharper disable InconsistentNaming
 // ReSharper disable UnusedAutoPropertyAccessor.Global
 // ReSharper disable UnusedMember.Global
@@ -75,6 +77,8 @@ namespace Butter
 		public g_Score last_score { get; set; }
 		public List<g_Team> teams { get; set; }
 
+		
+		[JsonIgnore]
 		public List<g_Team> playerTeams =>
 			new List<g_Team>
 			{
@@ -118,7 +122,7 @@ namespace Butter
 		/// </summary>
 		/// <param name="userid"></param>
 		/// <returns></returns>
-		public g_Player GetPlayer(long userid)
+		public g_Player GetPlayer(ulong userid)
 		{
 			foreach (var t in teams)
 			{
@@ -144,7 +148,7 @@ namespace Butter
 			return null;
 		}
 
-		public g_Team GetTeam(long userid)
+		public g_Team GetTeam(ulong userid)
 		{
 			foreach (g_Team t in teams)
 			{
@@ -157,7 +161,7 @@ namespace Butter
 			return null;
 		}
 
-		public g_Team.TeamColor GetTeamColor(long userid)
+		public g_Team.TeamColor GetTeamColor(ulong userid)
 		{
 			foreach (g_Team t in teams)
 			{
@@ -244,7 +248,7 @@ namespace Butter
 		/// <summary>
 		/// Application-scoped Oculus userid
 		/// </summary>
-		public long userid { get; set; }
+		public ulong userid { get; set; }
 		/// <summary>
 		/// Object describing a player's aggregated statistics throughout the match.
 		/// </summary>
@@ -287,6 +291,7 @@ namespace Butter
 	/// </summary>
 	public class g_Transform
 	{
+		[JsonIgnore]
 		public Vector3 Position {
 			get {
 				if (pos != null) return pos.ToVector3();
@@ -389,8 +394,10 @@ namespace Butter
 		/// <summary>
 		/// Not in the API, but add as soon as this frame is deserialized
 		/// </summary>
+		[JsonIgnore]
 		public TeamColor color { get; set; }
 
+		[JsonIgnore]
 		public List<string> player_names {
 			get
 			{
