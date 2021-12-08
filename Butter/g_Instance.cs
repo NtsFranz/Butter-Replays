@@ -62,10 +62,10 @@ namespace Butter
 		/// </summary>
 		public List<int> possession { get; set; }
 		public bool tournament_match { get; set; }
-		public float left_shoulder_pressed {get;set;}
-		public float right_shoulder_pressed {get;set;}
-		public float left_shoulder_pressed2 {get;set;} 
-		public float right_shoulder_pressed2 {get;set;}
+		public bool left_shoulder_pressed {get;set;}
+		public bool right_shoulder_pressed {get;set;}
+		public bool left_shoulder_pressed2 {get;set;} 
+		public bool right_shoulder_pressed2 {get;set;}
 		public bool blue_team_restart_request { get; set; }
 		/// <summary>
 		/// Name of the oculus username recording.

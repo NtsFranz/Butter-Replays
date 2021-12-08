@@ -84,6 +84,8 @@ namespace Butter
             SaveReplay(Path.Combine(outputFolder, Path.GetFileNameWithoutExtension(replayFile) + "_processed.echoreplay"), rereadReplay);
 
             File.WriteAllText(Path.Combine(outputFolder, Path.GetFileNameWithoutExtension(replayFile) + "_reconstructed_frame_1.json"), JsonConvert.SerializeObject(rereadReplay[0]));
+            File.WriteAllText(Path.Combine(outputFolder, Path.GetFileNameWithoutExtension(replayFile) + "_reconstructed_frame_2.json"), JsonConvert.SerializeObject(rereadReplay[1]));
+            File.WriteAllText(Path.Combine(outputFolder, Path.GetFileNameWithoutExtension(replayFile) + "_reconstructed_frame_10.json"), JsonConvert.SerializeObject(rereadReplay[9]));
             
             sw.Stop();
             Console.WriteLine($"Finished writing to .echoreplay file in {sw.Elapsed.TotalSeconds:N3} seconds");
