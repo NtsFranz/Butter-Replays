@@ -90,6 +90,19 @@ namespace Butter
 			// TODO contains more
 		}
 
+		public static string MatchType(string mapName, bool privateMatch) {
+			return mapName switch {
+				// "mpl_lobby_b2" => privateMatch ? "Private Match" : "Public Match",
+				"mpl_arena_a" => privateMatch ? "Echo_Arena_Private" : "Unknown",
+				// "mpl_combat_fission" => privateMatch ? "Private Match" : "Public Match",
+				// "mpl_combat_combustion" => privateMatch ? "Private Match" : "Public Match",
+				// "mpl_combat_dyson" => privateMatch ? "Private Match" : "Public Match",
+				// "mpl_combat_gauss" => privateMatch ? "Private Match" : "Public Match",
+				// "mpl_tutorial_arena" => privateMatch ? "Private Match" : "Public Match",
+				_ => "Unknown"
+			};
+		}
+
 		public class ButterFileHeader
 		{
 			public byte formatVersion = 3;
@@ -211,6 +224,10 @@ namespace Butter
 			public string GetPlayerName(byte playerIndex)
 			{
 				return playerIndex == 0 ? "INVALID PLAYER" : players[playerIndex - 1];
+			}
+			public int GetPlayerLevel(byte playerIndex)
+			{
+				return playerIndex == 0 ? -1 : levels[playerIndex - 1];
 			}
 
 			public ulong GetUserId(byte playerIndex)
@@ -437,8 +454,8 @@ namespace Butter
 
 							g_Player lastFramePlayer = lastButterFrame?.frame.GetPlayer(player.name);
 
-							Vector3 vel = player.velocity.ToVector3() - lastFramePlayer?.velocity.ToVector3() ??
-							              Vector3.Zero;
+							Vector3 vel = player.velocity.ToVector3() - (lastFramePlayer?.velocity.ToVector3() ??
+							              Vector3.Zero);
 
 							List<bool> playerStateBitmask = new List<bool>()
 							{
@@ -653,13 +670,13 @@ namespace Butter
 					{
 						List<byte> bytes = new List<byte>();
 						bytes.AddRange(BitConverter.GetBytes(
-							(Half)(frame.left_shoulder_pressed - lastButterFrame?.frame.left_shoulder_pressed ?? 0)));
+							(Half)(frame.left_shoulder_pressed - (lastButterFrame?.frame.left_shoulder_pressed ?? 0))));
 						bytes.AddRange(BitConverter.GetBytes((Half)(frame.right_shoulder_pressed -
-							lastButterFrame?.frame.right_shoulder_pressed ?? 0)));
+							(lastButterFrame?.frame.right_shoulder_pressed ?? 0))));
 						bytes.AddRange(BitConverter.GetBytes((Half)(frame.left_shoulder_pressed2 -
-							lastButterFrame?.frame.left_shoulder_pressed2 ?? 0)));
+							(lastButterFrame?.frame.left_shoulder_pressed2 ?? 0))));
 						bytes.AddRange(BitConverter.GetBytes((Half)(frame.right_shoulder_pressed2 -
-							lastButterFrame?.frame.right_shoulder_pressed2 ?? 0)));
+							(lastButterFrame?.frame.right_shoulder_pressed2 ?? 0))));
 						_inputBytes = bytes.ToArray();
 					}
 
@@ -937,7 +954,8 @@ namespace Butter
 					if (i != maxIndex)
 					{
 						// TODO test if these rotations are correct
-						data |= (ushort)(components[i] * sign * decimals + decimals / 2) << ((i + 1) * 2);
+						ushort val = (ushort)(components[i] * sign * decimals + decimals / 2);
+						data |= val << ((i * 10) + 2);
 					}
 				}
 
@@ -1042,6 +1060,7 @@ namespace Butter
 			byte mapByte = input.ReadByte();
 			firstFrame.private_match = (mapByte & 1) == 1;
 			firstFrame.map_name = ((MapName)(mapByte >> 1)).ToString();
+			firstFrame.match_type = MatchType(firstFrame.map_name, firstFrame.private_match);
 			// TODO arena or combat from map name
 
 			b.fileHeader.firstFrame = firstFrame;
@@ -1079,6 +1098,7 @@ namespace Butter
 				f.match_type = b.fileHeader.firstFrame.match_type;
 
 				f.game_clock = (float)input.ReadHalf();
+				f.game_clock_display = f.game_clock.ToGameClockDisplay();
 				if (!isKeyframe) f.game_clock += lastKeframe.game_clock;
 				byte inclusionBitmask = input.ReadByte();
 
@@ -1126,7 +1146,7 @@ namespace Butter
 					{
 						team = ButterFrame.TeamIndexToTeam((byte)(lastScoreByte & 0b11)),
 						point_amount = (lastScoreByte & 0b100) > 0 ? 3 : 2,
-						goal_type = ((GoalType)((lastScoreByte & 0b11111000) >> 3)).ToString(),
+						goal_type = ((GoalType)((lastScoreByte & 0b11111000) >> 3)).ToString().Replace("_", " "),
 						person_scored = b.fileHeader.GetPlayerName(input.ReadByte()),
 						assist_scored = b.fileHeader.GetPlayerName(input.ReadByte()),
 						disc_speed = (float)input.ReadHalf(),
@@ -1161,9 +1181,11 @@ namespace Butter
 					(Vector3 p, Quaternion q) = input.ReadPose();
 					f.player = new g_Playspace
 					{
-						vr_position = p.ToFloatArray()
+						vr_position = p.ToFloatArray(),
+						vr_forward = q.Forward().ToFloatArray(),
+						vr_left = q.Left().ToFloatArray(),
+						vr_up = q.Up().ToFloatArray(),
 					};
-					// TODO get vectors from quaternion
 					// TODO get diff from previous frames
 				}
 
@@ -1175,6 +1197,9 @@ namespace Butter
 					f.disc = new g_Disc
 					{
 						position = p.ToFloatArray().ToList(),
+						forward = q.Forward().ToFloatArray().ToList(),
+						left = q.Left().ToFloatArray().ToList(),
+						up = q.Up().ToFloatArray().ToList(),
 						// TODO get vectors from quaternion
 						velocity = new List<float>()
 						{
@@ -1217,46 +1242,52 @@ namespace Butter
 					for (int j = 0; j < teamPlayerCount; j++)
 					{
 						// TODO match to previous keyframe and diff
+
+						byte fileIndex = input.ReadByte();
+
 						g_Player p = new g_Player
 						{
-							name = b.fileHeader.GetPlayerName(input.ReadByte()),
-							playerid = input.ReadByte()
+							name = b.fileHeader.GetPlayerName(fileIndex),
+							playerid = input.ReadByte(),
+							level = b.fileHeader.GetPlayerLevel(fileIndex),
+							userid = b.fileHeader.GetUserId(fileIndex),
 						};
 
 						byte playerStateBitmask = input.ReadByte();
-						p.possession = (playerStateBitmask & 0x1) > 0;
-						p.blocking = (playerStateBitmask & 0x10) > 0;
-						p.stunned = (playerStateBitmask & 0x100) > 0;
-						p.invulnerable = (playerStateBitmask & 0x1000) > 0;
+						p.possession = (playerStateBitmask & 0b1) > 0;
+						p.blocking = (playerStateBitmask & 0b10) > 0;
+						p.stunned = (playerStateBitmask & 0b100) > 0;
+						p.invulnerable = (playerStateBitmask & 0b1000) > 0;
 
-						if ((playerStateBitmask & 0x1 << 4) > 0)
+						if ((playerStateBitmask & (1 << 4)) > 0)
 						{
 							p.stats = input.ReadStats();
 						}
 
-						if ((playerStateBitmask & 0x1 << 5) > 0)
+						if ((playerStateBitmask & (1 << 5)) > 0)
 						{
 							p.ping = input.ReadUInt16();
 							p.packetlossratio = (float)input.ReadHalf();
 						}
 
-						if ((playerStateBitmask & 0x1 << 6) > 0)
+						if ((playerStateBitmask & (1 << 6)) > 0)
 						{
 							p.holding_left = b.fileHeader.ByteToHolding(input.ReadByte());
 							p.holding_right = b.fileHeader.ByteToHolding(input.ReadByte());
 						}
 
-						if ((playerStateBitmask & 0x1 << 7) > 0)
+						if ((playerStateBitmask & (1 << 7)) > 0)
 						{
-							p.velocity = new List<float>()
-							{
-								// TODO check this order
-								(float)input.ReadHalf(),
-								(float)input.ReadHalf(),
-								(float)input.ReadHalf(),
-							};
+							p.velocity = input.ReadVector3Half().ToFloatArray().ToList();
+							// p.velocity = new List<float>()
+							// {
+							// 	// TODO check this order
+							// 	(float)input.ReadHalf(),
+							// 	(float)input.ReadHalf(),
+							// 	(float)input.ReadHalf(),
+							// };
 						}
-						p.velocity ??= new List<float>(){0,0,0};
+						// p.velocity ??= new List<float>(){0,0,0};
 
 						byte playerPoseBitmask = input.ReadByte();
 
@@ -1267,35 +1298,43 @@ namespace Butter
 
 						if ((playerPoseBitmask & 1 << 0) > 0)
 						{
-							p.head.pos = input.ReadVector3Half().ToFloatArray().ToList();
+							p.head.position = input.ReadVector3Half().ToFloatArray().ToList();
 						}
 
-						// TODO rotations
-						_ = input.ReadSmallestThree();
+						Quaternion q = input.ReadSmallestThree();
+						p.head.forward = q.Forward().ToFloatArray().ToList();
+						p.head.left = q.Left().ToFloatArray().ToList();
+						p.head.up = q.Up().ToFloatArray().ToList();
 
-						if ((playerPoseBitmask & 1 << 1) > 0)
+						if ((playerPoseBitmask & (1 << 1)) > 0)
 						{
-							p.body.pos = input.ReadVector3Half().ToFloatArray().ToList();
+							p.body.position = input.ReadVector3Half().ToFloatArray().ToList();
 						}
 
-						// TODO rotations
-						_ = input.ReadSmallestThree();
+						q = input.ReadSmallestThree();
+						p.body.forward = q.Forward().ToFloatArray().ToList();
+						p.body.left = q.Left().ToFloatArray().ToList();
+						p.body.up = q.Up().ToFloatArray().ToList();
 
-						if ((playerPoseBitmask & 1 << 2) > 0)
+						if ((playerPoseBitmask & (1 << 2)) > 0)
 						{
 							p.lhand.pos = input.ReadVector3Half().ToFloatArray().ToList();
 						}
 
-						// TODO rotations
-						_ = input.ReadSmallestThree();
+						q = input.ReadSmallestThree();
+						p.lhand.forward = q.Forward().ToFloatArray().ToList();
+						p.lhand.left = q.Left().ToFloatArray().ToList();
+						p.lhand.up = q.Up().ToFloatArray().ToList();
 
-						if ((playerPoseBitmask & 1 << 3) > 0)
+						if ((playerPoseBitmask & (1 << 3)) > 0)
 						{
 							p.rhand.pos = input.ReadVector3Half().ToFloatArray().ToList();
 						}
 
-						// TODO rotations
-						_ = input.ReadSmallestThree();
+						q = input.ReadSmallestThree();
+						p.rhand.forward = q.Forward().ToFloatArray().ToList();
+						p.rhand.left = q.Left().ToFloatArray().ToList();
+						p.rhand.up = q.Up().ToFloatArray().ToList();
 
 						// TODO assign to correct player if array already exists
 						f.teams[i].players.Add(p);
@@ -1434,6 +1473,7 @@ namespace Butter
 			str = str.Insert(8, "-");
 			str = str.Insert(13, "-");
 			str = str.Insert(18, "-");
+			str = str.Insert(23, "-");
 			return str;
 		}
 
@@ -1502,11 +1542,53 @@ namespace Butter
 			return p;
 		}
 
+
 		public static Quaternion ReadSmallestThree(this BinaryReader reader)
 		{
 			int st = reader.ReadInt32();
-			// TODO implement
-			return new Quaternion();
+
+			float decimals = 1000f;
+			int maxIndex = st & 0b11;
+			float f1 = (((ushort)((st & (0b1111111111 << 2)) >> 2)) - decimals/2) / decimals;
+			float f2 = (((ushort)((st & (0b1111111111 << 12)) >> 12)) - decimals/2) / decimals;
+			float f3 = (((ushort)((st & (0b1111111111 << 22)) >> 22)) - decimals/2) / decimals;
+			float f4 = MathF.Sqrt(1 - f1 * f1 - f2 * f2 - f3 * f3);
+			switch (maxIndex)
+			{
+				case 0:
+					return new Quaternion(f4, f1, f2, f3);
+				case 1:
+					return new Quaternion(f1, f4, f2, f3);
+				case 2:
+					return new Quaternion(f1, f2, f4, f3);
+				case 3:
+					return new Quaternion(f1, f2, f3, f4);
+				default:
+					throw new Exception("Invalid index");
+			};
+		}
+
+		// converts time in seconds to a string in the format "mm:ss.ms"
+		public static string ToGameClockDisplay(this float time) {
+			int minutes = (int)time / 60;
+			int seconds = (int)time % 60;
+			int milliseconds = (int)((time - (int)time) * 100);
+			return $"{minutes:D2}:{seconds:D2}.{milliseconds:D2}";
+		}
+
+		// converts this quaternion to its forward vector
+		public static Vector3 Forward(this Quaternion q) {
+			return new Vector3(2 * (q.X * q.Z + q.W * q.Y), 2 * (q.Y * q.Z - q.W * q.X), 1 - 2 * (q.X * q.X + q.Y * q.Y));
+		}
+
+		// converts this quaternion to its left vector
+		public static Vector3 Left(this Quaternion q) {
+			return new Vector3(2 * (q.X * q.Y - q.W * q.Z), 1 - 2 * (q.X * q.X + q.Z * q.Z), 2 * (q.Y * q.Z + q.W * q.X));
+		}
+
+		// converts this quaternion to its up vector
+		public static Vector3 Up(this Quaternion q) {
+			return new Vector3(2 * (q.X * q.Z - q.W * q.Y), 1 - 2 * (q.X * q.X + q.Y * q.Y), 2 * (q.Y * q.Z + q.W * q.X));
 		}
 	}
 }

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Numerics;
 using Newtonsoft.Json;
 using Spark;
 
@@ -23,8 +24,14 @@ namespace Butter
 
             string replayFile = GetArgument(args, "-i");
             string outputFolder = GetArgument(args, "-o");
-            if (string.IsNullOrEmpty(replayFile)) return;
-            if (string.IsNullOrEmpty(outputFolder)) return;
+            if (string.IsNullOrEmpty(replayFile)) {
+                Console.WriteLine("No input file specified");
+                return;
+            }
+            if (string.IsNullOrEmpty(outputFolder)) {
+                Console.WriteLine("No output folder specified");
+                return;
+            } 
 
             Console.WriteLine($"Reading file: {replayFile}");
             Stopwatch sw = new Stopwatch();
@@ -75,10 +82,21 @@ namespace Butter
             sw.Restart();
 
             SaveReplay(Path.Combine(outputFolder, Path.GetFileNameWithoutExtension(replayFile) + "_processed.echoreplay"), rereadReplay);
+
+            File.WriteAllText(Path.Combine(outputFolder, Path.GetFileNameWithoutExtension(replayFile) + "_reconstructed_frame_1.json"), JsonConvert.SerializeObject(rereadReplay[0]));
             
             sw.Stop();
             Console.WriteLine($"Finished writing to .echoreplay file in {sw.Elapsed.TotalSeconds:N3} seconds");
             sw.Restart();
+
+
+            // Quaternion before = new Quaternion(-0.15847519f,0.18832426f,-0.0826531f,0.965706f);
+            // // Quaternion before = new Quaternion(0,0,0,1);
+            // byte[] smallestThree = Butter.ButterFrame.SmallestThree(before);
+            // using (BinaryReader rd = new BinaryReader(new MemoryStream(smallestThree))) {
+            //     Quaternion after = rd.ReadSmallestThree();
+            //     Console.WriteLine($"{before}\n{after}");
+            // }
         }
         
         

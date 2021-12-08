@@ -300,9 +300,9 @@ namespace Butter
         {
             return new float[]
             {
-                vector3.Z,
+                vector3.X,
                 vector3.Y,
-                vector3.X
+                vector3.Z
             };
         }
         
