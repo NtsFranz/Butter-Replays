@@ -1,15 +1,22 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <OutputType>Exe</OutputType>
         <TargetFramework>net6.0</TargetFramework>
         <LangVersion>10</LangVersion>
-        <AssemblyName>Butter</AssemblyName>
-        <RootNamespace>Butter</RootNamespace>
+        <AssemblyName>ButterReplays</AssemblyName>
+        <RootNamespace>ButterReplays</RootNamespace>
         <Company>NtsFranz</Company>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Title>Butter Replay Format</Title>
+        <Authors>NtsFranz</Authors>
+        <Description>The Butter replay format is a binary compressed format built for incremental loading and minimal file size. </Description>
+        <PackageProjectUrl>https://github.com/NtsFranz/Butter-Replays</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/NtsFranz/Butter-Replays</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="EchoVRAPI" Version="1.0.0" />
       <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     </ItemGroup>
 

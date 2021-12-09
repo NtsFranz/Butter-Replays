@@ -2,19 +2,19 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Butter;
+using EchoVRAPI;
 
-namespace Spark
+namespace ButterReplays
 {
 	/// <summary>
 	/// 🥛🥛🥛🥛🥛
 	/// </summary>
-	class Milk
+	public class Milk
 	{
 		public MilkFileHeader fileHeader;
 		public List<MilkFrame> frames;
 
-		public Milk(g_Instance frame)
+		public Milk(Frame frame)
 		{
 			AddFrame(frame);
 		}
@@ -37,14 +37,14 @@ namespace Spark
 		/// </summary>
 		public class MilkFileHeader
 		{
-			public g_Instance frame;
+			public Frame frame;
 			public List<string> players;
 			public List<int> numbers;
 			public List<int> levels;
 			public List<ulong> userids;
 			public byte headerByte;
 
-			public MilkFileHeader(g_Instance frame)
+			public MilkFileHeader(Frame frame)
 			{
 				this.frame = frame;
 
@@ -70,11 +70,11 @@ namespace Spark
 				levels = new List<int>();
 				userids = new List<ulong>();
 
-				foreach (g_Team team in frame.teams)
+				foreach (Team team in frame.teams)
 				{
 					if (team.players != null)
 					{
-						foreach (g_Player player in team.players)
+						foreach (Player player in team.players)
 						{
 							players.Add(player.name);
 							numbers.Add(player.number);
@@ -85,13 +85,13 @@ namespace Spark
 				}
 			}
 
-			public void ConsiderNewFrame(g_Instance frame)
+			public void ConsiderNewFrame(Frame frame)
 			{
-				foreach (g_Team team in frame.teams)
+				foreach (Team team in frame.teams)
 				{
 					if (team.players != null)
 					{
-						foreach (g_Player player in team.players)
+						foreach (Player player in team.players)
 						{
 							if (!userids.Contains(player.userid))
 							{
@@ -132,16 +132,16 @@ namespace Spark
 			public List<byte> data;
 		}
 
-		private static byte[] BuildFrameHeader(g_Instance frame)
+		private static byte[] BuildFrameHeader(Frame frame)
 		{
 			List<byte> bytes = new List<byte> { 254, 253 };
 			bytes.AddRange(BitConverter.GetBytes(frame.blue_points));
 			bytes.AddRange(BitConverter.GetBytes(frame.orange_points));
-			bytes.AddRange((new List<bool> { frame.blue_team_restart_request, frame.orange_team_restart_request }).GetBytes());
+			bytes.AddRange((new List<bool> { frame.blue_team_restart_request, frame.orange_team_restart_request }).GetBitmasks());
 
 			// add last score
 			bytes.AddRange(BitConverter.GetBytes(frame.last_score.disc_speed));
-			bytes.Add((byte)Enum.Parse(typeof(g_Team.TeamColor), frame.last_score.team));
+			bytes.Add((byte)Enum.Parse(typeof(Team.TeamColor), frame.last_score.team));
 			bytes.AddRange(Encoding.ASCII.GetBytes(frame.last_score.goal_type));
 			bytes.Add(0);
 			bytes.AddRange(BitConverter.GetBytes(frame.last_score.point_amount));
@@ -153,7 +153,7 @@ namespace Spark
 
 			foreach (var team in frame.teams)
 			{
-				if (team.stats == null) team.stats = new g_Stats();
+				if (team.stats == null) team.stats = new Stats();
 				bytes.AddRange(BitConverter.GetBytes((byte)team.stats.points));
 				bytes.AddRange(BitConverter.GetBytes(team.stats.possession_time));
 				bytes.AddRange(BitConverter.GetBytes((byte)team.stats.interceptions));
@@ -190,7 +190,7 @@ namespace Spark
 			return bytes.ToArray();
 		}
 
-		private static byte[] BuildChunk(g_Instance frame)
+		private static byte[] BuildChunk(Frame frame)
 		{
 			List<byte> bytes = new List<byte> { 253, 254 };
 			List<bool> bools = new List<bool>();
@@ -198,17 +198,17 @@ namespace Spark
 			bytes.AddRange(BitConverter.GetBytes(frame.game_clock));
 
 			// disc position, velocity, and orientation
-			bytes.AddRange(frame.disc.position.GetBytes());
-			bytes.AddRange(frame.disc.left.GetBytes());
-			bytes.AddRange(frame.disc.up.GetBytes());
-			bytes.AddRange(frame.disc.forward.GetBytes());
-			bytes.AddRange(frame.disc.velocity.GetBytes());
+			bytes.AddRange(frame.disc.position.GetHalfBytes());
+			bytes.AddRange(frame.disc.left.GetHalfBytes());
+			bytes.AddRange(frame.disc.up.GetHalfBytes());
+			bytes.AddRange(frame.disc.forward.GetHalfBytes());
+			bytes.AddRange(frame.disc.velocity.GetHalfBytes());
 
 			// local vr player position
-			bytes.AddRange(frame.player.vr_position.GetBytes());
-			bytes.AddRange(frame.player.vr_left.GetBytes());
-			bytes.AddRange(frame.player.vr_up.GetBytes());
-			bytes.AddRange(frame.player.vr_forward.GetBytes());
+			bytes.AddRange(frame.player.vr_position.GetHalfBytes());
+			bytes.AddRange(frame.player.vr_left.GetHalfBytes());
+			bytes.AddRange(frame.player.vr_up.GetHalfBytes());
+			bytes.AddRange(frame.player.vr_forward.GetHalfBytes());
 
 			// game state
 			if (string.IsNullOrEmpty(frame.game_status))
@@ -254,7 +254,7 @@ namespace Spark
 
 						foreach (List<float> vector in vectors)
 						{
-							bytes.AddRange(vector.GetBytes());
+							bytes.AddRange(vector.GetHalfBytes());
 						}
 
 						bytes.AddRange(BitConverter.GetBytes(player.ping));
@@ -267,12 +267,12 @@ namespace Spark
 				}
 			}
 
-			bytes.AddRange(bools.GetBytes());
+			bytes.AddRange(bools.GetBitmasks());
 
 			return bytes.ToArray();
 		}
 
-		public void AddFrame(g_Instance frame)
+		public void AddFrame(Frame frame)
 		{
 			// if there is no data yet, add this frame to the file header
 			if (fileHeader == null)
@@ -313,64 +313,6 @@ namespace Spark
 			{
 				bytes.AddRange(frame.header);
 				bytes.AddRange(frame.data);
-			}
-
-			return bytes.ToArray();
-		}
-	}
-
-	public static class BitConverterExtensions
-	{
-		public static byte[] GetBytes(this IEnumerable<float> values)
-		{
-			List<byte> bytes = new List<byte>();
-			foreach (var val in values)
-			{
-				bytes.AddRange(BitConverter.GetBytes(val));
-			}
-
-			return bytes.ToArray();
-		}
-
-		public static byte[] GetBytes(this IEnumerable<int> values)
-		{
-			List<byte> bytes = new List<byte>();
-			foreach (var val in values)
-			{
-				bytes.AddRange(BitConverter.GetBytes(val));
-			}
-
-			return bytes.ToArray();
-		}
-
-		public static byte[] GetBytes(this IEnumerable<long> values)
-		{
-			List<byte> bytes = new List<byte>();
-			foreach (var val in values)
-			{
-				bytes.AddRange(BitConverter.GetBytes(val));
-			}
-
-			return bytes.ToArray();
-		}
-
-		/// <summary>
-		/// Compresses the list of bools into bytes using a bitmask
-		/// </summary>
-		public static byte[] GetBytes(this List<bool> values)
-		{
-			List<byte> bytes = new List<byte>();
-			for (int b = 0; b < Math.Ceiling(values.Count / 8f); b++)
-			{
-				byte currentByte = 0;
-				for (int bit = 0; bit < 8; bit++)
-				{
-					if (values.Count > b * 8 + bit)
-					{
-						currentByte |= (byte)((values[b * 8 + bit] ? 1 : 0) << bit);
-					}
-				}
-				bytes.Add(currentByte);
 			}
 
 			return bytes.ToArray();

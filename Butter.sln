@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Butter", "Butter\Butter.csproj", "{5DAE57BB-7FC6-4D73-9099-C17387060266}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ButterTest", "ButterTest\ButterTest.csproj", "{67FD4B7F-608C-4D2A-A5B7-7742B662239E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{5DAE57BB-7FC6-4D73-9099-C17387060266}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5DAE57BB-7FC6-4D73-9099-C17387060266}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5DAE57BB-7FC6-4D73-9099-C17387060266}.Release|Any CPU.Build.0 = Release|Any CPU
+		{67FD4B7F-608C-4D2A-A5B7-7742B662239E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{67FD4B7F-608C-4D2A-A5B7-7742B662239E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{67FD4B7F-608C-4D2A-A5B7-7742B662239E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{67FD4B7F-608C-4D2A-A5B7-7742B662239E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

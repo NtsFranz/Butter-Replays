@@ -4,13 +4,14 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Text;
+using EchoVRAPI;
 
-namespace Butter
+namespace ButterReplays
 {
 	/// <summary>
-	/// 🥛🥛🥛🥛🥛
+	/// 🧈🧈🧈🧈🧈
 	/// </summary>
-	public class Butter
+	public class ButterFile
 	{
 		private ButterFileHeader fileHeader;
 		private List<ButterFrame> frames;
@@ -18,11 +19,11 @@ namespace Butter
 		public static int includedCount = 0;
 		public static int excludedCount = 0;
 
-		public Butter()
+		public ButterFile()
 		{
 		}
 
-		public Butter(g_Instance frame)
+		public ButterFile(Frame frame)
 		{
 			AddFrame(frame);
 		}
@@ -108,7 +109,7 @@ namespace Butter
 			public byte formatVersion = 3;
 			public ushort keyframeInterval = 30;
 
-			public g_Instance firstFrame;
+			public Frame firstFrame;
 
 			public List<string> players;
 			public List<int> numbers;
@@ -124,7 +125,7 @@ namespace Butter
 				userids = new List<ulong>();
 			}
 
-			public ButterFileHeader(g_Instance firstFrame)
+			public ButterFileHeader(Frame firstFrame)
 			{
 				this.firstFrame = firstFrame;
 
@@ -136,12 +137,12 @@ namespace Butter
 				ConsiderNewFrame(firstFrame);
 			}
 
-			public void ConsiderNewFrame(g_Instance frame)
+			public void ConsiderNewFrame(Frame frame)
 			{
-				foreach (g_Team team in frame.teams)
+				foreach (Team team in frame.teams)
 				{
 					if (team.players == null) continue;
-					foreach (g_Player player in team.players)
+					foreach (Player player in team.players)
 					{
 						if (!userids.Contains(player.userid))
 						{
@@ -266,27 +267,26 @@ namespace Butter
 
 			public byte[] GetBytes()
 			{
-				List<byte> bytes = new List<byte>();
-
-				bytes.Add(formatVersion); // version number
-				bytes.AddRange(BitConverter.GetBytes(keyframeInterval));
-				bytes.AddRange(Encoding.ASCII.GetBytes(firstFrame.client_name));
-				bytes.Add(0);
-				bytes.AddRange(SessionIdToBytes(firstFrame.sessionid));
-				bytes.AddRange(IpAddressToBytes(firstFrame.sessionip));
+				using MemoryStream memoryStream = new MemoryStream();
+				using BinaryWriter writer = new BinaryWriter(memoryStream);
+				writer.Write(formatVersion);
+				writer.Write(keyframeInterval);
+				writer.Write(Encoding.ASCII.GetBytes(firstFrame.client_name));
+				writer.Write((byte)0);
+				writer.Write(SessionIdToBytes(firstFrame.sessionid));
+				writer.Write(IpAddressToBytes(firstFrame.sessionip));
 				if (players.Count > 255) throw new Exception("Number of players doesn't fit in a byte.");
-				bytes.Add((byte)players.Count);
-				for (int i = 0; i < players.Count; i++)
+				writer.Write((byte)players.Count);
+				foreach (string playerName in players)
 				{
-					string t = players[i];
-					bytes.AddRange(Encoding.ASCII.GetBytes(t));
-					bytes.Add(0);
+					writer.Write(Encoding.ASCII.GetBytes(playerName));
+					writer.Write((byte)0);
 				}
 
-				bytes.AddRange(userids.GetBytes());
-				bytes.AddRange(numbers.GetByteBytes());
-				bytes.AddRange(levels.GetByteBytes());
-				bytes.Add((byte)firstFrame.total_round_count);
+				writer.Write(userids.GetBytes());
+				writer.Write(numbers.GetByteBytes());
+				writer.Write(levels.GetByteBytes());
+				writer.Write((byte)firstFrame.total_round_count);
 				if (firstFrame.blue_round_score > 127 ||
 					firstFrame.orange_round_score > 127)
 				{
@@ -295,20 +295,21 @@ namespace Butter
 
 				byte roundScores = (byte)firstFrame.blue_round_score;
 				roundScores += (byte)(firstFrame.orange_round_score << 4);
-				bytes.Add(roundScores);
+				writer.Write(roundScores);
 
 				byte mapByte = firstFrame.private_match ? (byte)1 : (byte)0;
 				mapByte += (byte)((byte)Enum.Parse<MapName>(firstFrame.map_name) << 1);
-				bytes.Add(mapByte);
-
-				return bytes.ToArray();
+				writer.Write(mapByte);
+				
+				writer.Flush();
+				return memoryStream.ToArray();
 			}
 		}
 
 
 		public class ButterFrame
 		{
-			private g_Instance frame;
+			private Frame frame;
 			public ButterFrame lastButterFrame;
 			private ButterFileHeader butterHeader;
 
@@ -328,7 +329,7 @@ namespace Butter
 			/// <param name="frame">The original data</param>
 			/// <param name="lastButterFrame">Previous butter frame to do diffs with. Pass in null to avoid diffs</param>
 			/// <param name="butterHeader">The butter header, which contains player dictionaries</param>
-			public ButterFrame(g_Instance frame, ButterFrame lastButterFrame, ButterFileHeader butterHeader)
+			public ButterFrame(Frame frame, ButterFrame lastButterFrame, ButterFileHeader butterHeader)
 			{
 				this.frame = frame;
 				this.lastButterFrame = lastButterFrame;
@@ -337,18 +338,19 @@ namespace Butter
 
 			public byte[] GetBytes()
 			{
-				List<byte> bytes = new List<byte>();
+				using MemoryStream memoryStream = new MemoryStream();
+				using BinaryWriter writer = new BinaryWriter(memoryStream);
+				
 				if (lastButterFrame == null)
 				{
-					bytes.AddRange(BitConverter.GetBytes((ushort)0xFEFC));
+					writer.Write((ushort)0xFEFC);
 				}
 				else
 				{
-					bytes.AddRange(BitConverter.GetBytes((ushort)0xFEFE));
+					writer.Write((ushort)0xFEFE);
 				}
 
-				bytes.AddRange(
-					BitConverter.GetBytes((Half)(frame.game_clock - (lastButterFrame?.frame.game_clock ?? 0))));
+				writer.Write((Half)(frame.game_clock - (lastButterFrame?.frame.game_clock ?? 0)));
 
 				List<bool> inclusionBits = new List<bool>() {
 					frame.game_status != lastButterFrame?.frame.game_status,
@@ -360,54 +362,54 @@ namespace Butter
 					!VrPlayerBytes.SameAs(lastButterFrame?.VrPlayerBytes),
 					!DiscBytes.SameAs(lastButterFrame?.DiscBytes)
 				};
-				bytes.Add(inclusionBits.GetBitmasks()[0]);
+				writer.Write(inclusionBits.GetBitmasks()[0]);
 
 
 				if (inclusionBits[0])
 				{
-					bytes.Add(GameStatusToByte(frame.game_status));
+					writer.Write(GameStatusToByte(frame.game_status));
 				}
 
 				if (inclusionBits[1])
 				{
-					bytes.Add((byte)frame.blue_points);
-					bytes.Add((byte)frame.orange_points);
+					writer.Write((byte)frame.blue_points);
+					writer.Write((byte)frame.orange_points);
 				}
 
 				// Pause and restarts
 				if (inclusionBits[2])
 				{
-					bytes.AddRange(PauseAndRestartsBytes);
+					writer.Write(PauseAndRestartsBytes);
 				}
 
 				// Inputs
 				if (inclusionBits[3])
 				{
-					bytes.AddRange(InputBytes);
+					writer.Write(InputBytes);
 				}
 
 				// Last Score
 				if (inclusionBits[4])
 				{
-					bytes.AddRange(LastScoreBytes);
+					writer.Write(LastScoreBytes);
 				}
 
 				// Last Throw
 				if (inclusionBits[5])
 				{
-					bytes.AddRange(LastThrowBytes);
+					writer.Write(LastThrowBytes);
 				}
 
 				// VR Player
 				if (inclusionBits[6])
 				{
-					bytes.AddRange(VrPlayerBytes);
+					writer.Write(VrPlayerBytes);
 				}
 
 				// Disc
 				if (inclusionBits[7])
 				{
-					bytes.AddRange(DiscBytes);
+					writer.Write(DiscBytes);
 				}
 
 				byte teamDataBitmask = 0;
@@ -425,7 +427,7 @@ namespace Butter
 				teamDataBitmask |= (byte)((byte)(teamStatsIncluded[0] ? 1 : 0) << 2);
 				teamDataBitmask |= (byte)((byte)(teamStatsIncluded[1] ? 1 : 0) << 3);
 				teamDataBitmask |= (byte)((byte)(teamStatsIncluded[2] ? 1 : 0) << 4);
-				bytes.Add(teamDataBitmask);
+				writer.Write(teamDataBitmask);
 
 
 				// add team data
@@ -433,18 +435,18 @@ namespace Butter
 				{
 					if (teamStatsIncluded[i])
 					{
-						bytes.AddRange(StatsBytes(frame.teams[i].stats, lastButterFrame?.frame.teams[i].stats));
+						writer.Write(StatsBytes(frame.teams[i].stats, lastButterFrame?.frame.teams[i].stats));
 					}
 
-					bytes.Add((byte)(frame.teams[i]?.players?.Count ?? 0));
+					writer.Write((byte)(frame.teams[i]?.players?.Count ?? 0));
 					if ((frame.teams[i]?.players?.Count ?? 0) > 0)
 					{
-						foreach (g_Player player in frame.teams[i].players)
+						foreach (Player player in frame.teams[i].players)
 						{
-							bytes.Add(butterHeader.GetPlayerIndex(player.name));
-							bytes.Add((byte)player.playerid);
+							writer.Write(butterHeader.GetPlayerIndex(player.name));
+							writer.Write((byte)player.playerid);
 
-							g_Player lastFramePlayer = lastButterFrame?.frame.GetPlayer(player.userid);
+							Player lastFramePlayer = lastButterFrame?.frame.GetPlayer(player.userid);
 
 							Vector3 vel = player.velocity.ToVector3() - (lastFramePlayer?.velocity.ToVector3() ??
 										  Vector3.Zero);
@@ -462,31 +464,29 @@ namespace Butter
 								player.holding_right == lastFramePlayer.holding_right),
 								vel.LengthSquared() > .0001f
 							};
-							bytes.Add(playerStateBitmask.GetBitmasks()[0]);
+							writer.Write(playerStateBitmask.GetBitmasks()[0]);
 
 
 							if (playerStateBitmask[4])
 							{
-								bytes.AddRange(StatsBytes(player.stats, lastFramePlayer?.stats));
+								writer.Write(StatsBytes(player.stats, lastFramePlayer?.stats));
 							}
 
 							if (playerStateBitmask[5])
 							{
-								bytes.AddRange(
-									BitConverter.GetBytes((ushort)(player.ping - (lastFramePlayer?.ping ?? 0))));
-								bytes.AddRange(BitConverter.GetBytes(
-									(Half)(player.packetlossratio - (lastFramePlayer?.packetlossratio ?? 0))));
+								writer.Write((ushort)(player.ping - (lastFramePlayer?.ping ?? 0)));
+								writer.Write((Half)(player.packetlossratio - (lastFramePlayer?.packetlossratio ?? 0)));
 							}
 
 							if (playerStateBitmask[6])
 							{
-								bytes.Add(butterHeader.HoldingToByte(player.holding_left));
-								bytes.Add(butterHeader.HoldingToByte(player.holding_right));
+								writer.Write(butterHeader.HoldingToByte(player.holding_left));
+								writer.Write(butterHeader.HoldingToByte(player.holding_right));
 							}
 
 							if (playerStateBitmask[7])
 							{
-								bytes.AddRange((vel).GetHalfBytes());
+								writer.Write(vel.GetHalfBytes());
 							}
 
 							List<bool> playerPoseBitmask = new List<bool>()
@@ -503,7 +503,7 @@ namespace Butter
 								Vector3.DistanceSquared(player.rhand.Position - player.head.Position,
 									lastFramePlayer.rhand.Position - lastFramePlayer.head.Position) > .0001f,
 							};
-							bytes.Add(playerPoseBitmask.GetBitmasks()[0]);
+							writer.Write(playerPoseBitmask.GetBitmasks()[0]);
 
 							if (playerPoseBitmask[1])
 							{
@@ -518,18 +518,19 @@ namespace Butter
 							byte[] bodyBytes = PoseToBytes(player.body, lastFramePlayer?.body);
 							byte[] lHandBytes = PoseToBytes(player.lhand, lastFramePlayer?.lhand);
 							byte[] rHandBytes = PoseToBytes(player.rhand, lastFramePlayer?.rhand);
-							bytes.AddRange(playerPoseBitmask[0] ? headBytes : headBytes.Skip(6));
-							bytes.AddRange(playerPoseBitmask[1] ? bodyBytes : bodyBytes.Skip(6));
-							bytes.AddRange(playerPoseBitmask[2] ? lHandBytes : lHandBytes.Skip(6));
-							bytes.AddRange(playerPoseBitmask[3] ? rHandBytes : rHandBytes.Skip(6));
+							writer.Write(playerPoseBitmask[0] ? headBytes : headBytes.Skip(6).ToArray());
+							writer.Write(playerPoseBitmask[1] ? bodyBytes : bodyBytes.Skip(6).ToArray());
+							writer.Write(playerPoseBitmask[2] ? lHandBytes : lHandBytes.Skip(6).ToArray());
+							writer.Write(playerPoseBitmask[3] ? rHandBytes : rHandBytes.Skip(6).ToArray());
 						}
 					}
 				}
 
-				return bytes.ToArray();
+				writer.Flush();
+				return memoryStream.ToArray();
 			}
 
-			private static byte[] StatsBytes(g_Stats stats, g_Stats lastStats = null)
+			private static byte[] StatsBytes(Stats stats, Stats lastStats = null)
 			{
 				if (stats == null) return null;
 				List<byte> bytes = new List<byte>();
@@ -801,7 +802,7 @@ namespace Butter
 				};
 			}
 
-			public static byte[] PoseToBytes(g_Transform transform, g_Transform lastTransform)
+			public static byte[] PoseToBytes(Transform transform, Transform lastTransform)
 			{
 				// Quaternion rot = QuaternionLookRotation(transform.forward.ToVector3(), transform.up.ToVector3());
 				// Quaternion lastRot = QuaternionLookRotation(lastTransform.forward.ToVector3(), lastTransform.up.ToVector3());
@@ -813,7 +814,7 @@ namespace Butter
 				);
 			}
 
-			public static byte[] PoseToBytes(g_Transform transform)
+			public static byte[] PoseToBytes(Transform transform)
 			{
 				return PoseToBytes(
 					transform.Position,
@@ -957,7 +958,7 @@ namespace Butter
 		}
 
 
-		public void AddFrame(g_Instance frame)
+		public void AddFrame(Frame frame)
 		{
 			// if there is no data yet, add this frame to the file header
 			if (fileHeader == null)
@@ -1002,11 +1003,11 @@ namespace Butter
 			return bytes.ToArray();
 		}
 
-		public static List<g_Instance> FromBytes(BinaryReader input)
+		public static List<Frame> FromBytes(BinaryReader input)
 		{
-			List<g_Instance> l = new List<g_Instance>();
+			List<Frame> l = new List<Frame>();
 
-			Butter b = new Butter
+			ButterFile b = new ButterFile
 			{
 				fileHeader = new ButterFileHeader
 				{
@@ -1016,7 +1017,7 @@ namespace Butter
 				}
 			};
 
-			g_Instance firstFrame = new g_Instance
+			Frame firstFrame = new Frame
 			{
 				client_name = input.ReadASCIIString(),
 				sessionid = input.ReadSessionId(),
@@ -1058,8 +1059,8 @@ namespace Butter
 
 			b.fileHeader.firstFrame = firstFrame;
 
-			g_Instance lastKeframe = null;
-			g_Instance lastFrame = null;
+			Frame lastKeframe = null;
+			Frame lastFrame = null;
 
 			// reads one frame at a time
 			while (!input.EOF())
@@ -1078,31 +1079,32 @@ namespace Butter
 				}
 
 
-				// g_Instance f = isKeyframe ? new g_Instance() : lastKeframe.Copy();
-				g_Instance f = new g_Instance();
+				// Frame f = isKeyframe ? new Frame() : lastKeframe.Copy();
+				Frame f = new Frame
+				{
+					client_name = b.fileHeader.firstFrame.client_name,
+					sessionid = b.fileHeader.firstFrame.sessionid,
+					sessionip = b.fileHeader.firstFrame.sessionip,
+					total_round_count = b.fileHeader.firstFrame.total_round_count,
+					blue_round_score = b.fileHeader.firstFrame.blue_round_score,
+					orange_round_score = b.fileHeader.firstFrame.orange_round_score,
+					private_match = b.fileHeader.firstFrame.private_match,
+					map_name = b.fileHeader.firstFrame.map_name,
+					match_type = b.fileHeader.firstFrame.match_type,
+					game_clock = (float)input.ReadHalf() + (isKeyframe ? 0 : lastKeframe.game_clock)
+				};
 
-				f.client_name = b.fileHeader.firstFrame.client_name;
-				f.sessionid = b.fileHeader.firstFrame.sessionid;
-				f.sessionip = b.fileHeader.firstFrame.sessionip;
-				f.total_round_count = b.fileHeader.firstFrame.total_round_count;
-				f.blue_round_score = b.fileHeader.firstFrame.blue_round_score;
-				f.orange_round_score = b.fileHeader.firstFrame.orange_round_score;
-				f.private_match = b.fileHeader.firstFrame.private_match;
-				f.map_name = b.fileHeader.firstFrame.map_name;
-				f.match_type = b.fileHeader.firstFrame.match_type;
-
-				f.game_clock = (float)input.ReadHalf() + (isKeyframe ? 0 : lastKeframe.game_clock);
 				f.game_clock_display = f.game_clock.ToGameClockDisplay();
 				byte inclusionBitmask = input.ReadByte();
 
-				if ((inclusionBitmask & (1 << 0)) > 0)
+				if (inclusionBitmask.GetBitmaskValue(0))
 				{
 					f.game_status = ButterFrame.ByteToGameStatus(input.ReadByte());
 				} else {
 					f.game_status = lastKeframe.game_status;
 				}
 
-				if ((inclusionBitmask & (1 << 1)) > 0)
+				if (inclusionBitmask.GetBitmaskValue(1))
 				{
 					f.blue_points = input.ReadByte();
 					f.orange_points = input.ReadByte();
@@ -1112,12 +1114,12 @@ namespace Butter
 				}
 
 				// Pause and restarts
-				if ((inclusionBitmask & (1 << 2)) > 0)
+				if (inclusionBitmask.GetBitmaskValue(2))
 				{
 					byte pauses = input.ReadByte();
 					f.blue_team_restart_request = (pauses & 0b1) > 0;
 					f.orange_team_restart_request = (pauses & 0b10) > 0;
-					f.pause = new g_Pause
+					f.pause = new Pause
 					{
 						paused_requested_team = ButterFrame.TeamIndexToTeam((byte)((pauses & 0b1100) >> 2)),
 						unpaused_team = ButterFrame.TeamIndexToTeam((byte)((pauses & 0b110000) >> 4)),
@@ -1130,7 +1132,7 @@ namespace Butter
 				}
 
 				// Inputs
-				if ((inclusionBitmask & (1 << 3)) > 0)
+				if (inclusionBitmask.GetBitmaskValue(3))
 				{
 					byte inputByte = input.ReadByte();
 					f.left_shoulder_pressed = (inputByte & 1) > 0;
@@ -1145,10 +1147,10 @@ namespace Butter
 				}
 
 				// Last Score
-				if ((inclusionBitmask & (1 << 4)) > 0)
+				if (inclusionBitmask.GetBitmaskValue(4))
 				{
 					byte lastScoreByte = input.ReadByte();
-					f.last_score = new g_Score
+					f.last_score = new LastScore
 					{
 						team = ButterFrame.TeamIndexToTeam((byte)(lastScoreByte & 0b11)),
 						point_amount = (lastScoreByte & 0b100) > 0 ? 3 : 2,
@@ -1163,9 +1165,9 @@ namespace Butter
 				}
 
 				// Last Throw
-				if ((inclusionBitmask & (1 << 5)) > 0)
+				if (inclusionBitmask.GetBitmaskValue(5))
 				{
-					f.last_throw = new g_LastThrow
+					f.last_throw = new LastThrow
 					{
 						arm_speed = (float)input.ReadHalf(),
 						total_speed = (float)input.ReadHalf(),
@@ -1189,12 +1191,12 @@ namespace Butter
 				if (inclusionBitmask.GetBitmaskValue(6))
 				{
 					(Vector3 p, Quaternion q) = input.ReadPose();
-					f.player = new g_Playspace
+					f.player = new VRPlayer
 					{
-						vr_position = p.ToFloatArray(),
-						vr_forward = q.Forward().ToFloatArray(),
-						vr_left = q.Left().ToFloatArray(),
-						vr_up = q.Up().ToFloatArray(),
+						vr_position = p.ToFloatList(),
+						vr_forward = q.Forward().ToFloatList(),
+						vr_left = q.Left().ToFloatList(),
+						vr_up = q.Up().ToFloatList(),
 					};
 					// TODO get diff from previous frames
 				}
@@ -1210,7 +1212,7 @@ namespace Butter
 
 					p += (lastFrame?.disc.position.ToVector3() ?? Vector3.Zero);
 
-					f.disc = new g_Disc
+					f.disc = new Disc
 					{
 						position = p.ToFloatArray().ToList(),
 						forward = q.Forward().ToFloatArray().ToList(),
@@ -1231,11 +1233,11 @@ namespace Butter
 				}
 
 				byte teamDataBitmask = input.ReadByte();
-				f.teams = new List<g_Team>()
+				f.teams = new List<Team>()
 				{
-					new g_Team(),
-					new g_Team(),
-					new g_Team(),
+					new Team(),
+					new Team(),
+					new Team(),
 				};
 				f.teams[0].possession = (teamDataBitmask & 0b1) > 0;
 				f.teams[1].possession = (teamDataBitmask & 0b10) > 0;
@@ -1257,14 +1259,14 @@ namespace Butter
 
 					int teamPlayerCount = input.ReadByte();
 
-					f.teams[i].players = new List<g_Player>();
+					f.teams[i].players = new List<Player>();
 					for (int j = 0; j < teamPlayerCount; j++)
 					{
 						// TODO match to previous keyframe and diff
 
 						byte fileIndex = input.ReadByte();
 
-						g_Player p = new g_Player
+						Player p = new Player
 						{
 							name = b.fileHeader.GetPlayerName(fileIndex),
 							playerid = input.ReadByte(),
@@ -1281,7 +1283,7 @@ namespace Butter
 						if (playerStateBitmask.GetBitmaskValue(4))
 						{
 							p.stats = input.ReadStats();
-							g_Stats oldStats = lastFrame?.GetPlayer(p.userid)?.stats;
+							Stats oldStats = lastFrame?.GetPlayer(p.userid)?.stats;
 							if (oldStats != null)
 							{
 								p.stats += oldStats;
@@ -1325,10 +1327,10 @@ namespace Butter
 
 						byte playerPoseBitmask = input.ReadByte();
 
-						p.head = new g_Transform();
-						p.body = new g_Transform();
-						p.lhand = new g_Transform();
-						p.rhand = new g_Transform();
+						p.head = new Transform();
+						p.body = new Transform();
+						p.lhand = new Transform();
+						p.rhand = new Transform();
 
 						if (playerPoseBitmask.GetBitmaskValue(0))
 						{
@@ -1457,6 +1459,18 @@ namespace Butter
 
 			return bytes.ToArray();
 		}
+		
+
+		public static byte[] GetBytes(this IEnumerable<float> values)
+		{
+			List<byte> bytes = new List<byte>();
+			foreach (float val in values)
+			{
+				bytes.AddRange(BitConverter.GetBytes(val));
+			}
+
+			return bytes.ToArray();
+		}
 
 		/// <summary>
 		/// Compresses the list of bools into bytes using a bitmask
@@ -1519,7 +1533,7 @@ namespace Butter
 
 		public static string ReadSessionId(this BinaryReader reader)
 		{
-			string str = Butter.ButterFileHeader.ByteArrayToString(reader.ReadBytes(16));
+			string str = ButterFile.ButterFileHeader.ByteArrayToString(reader.ReadBytes(16));
 			str = str.Insert(8, "-");
 			str = str.Insert(13, "-");
 			str = str.Insert(18, "-");
@@ -1558,9 +1572,9 @@ namespace Butter
 			return (p, q);
 		}
 
-		public static g_Stats ReadStats(this BinaryReader reader)
+		public static Stats ReadStats(this BinaryReader reader)
 		{
-			g_Stats stats = new g_Stats
+			Stats stats = new Stats
 			{
 				assists = reader.ReadByte(),
 				blocks = reader.ReadByte(),
