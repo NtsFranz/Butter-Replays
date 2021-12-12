@@ -16,8 +16,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="EchoVRAPI" Version="1.0.0" />
+      <PackageReference Include="DK.Compression" Version="4.1.3.201115161" />
+      <PackageReference Include="EchoVRAPI" Version="1.0.1" />
+      <PackageReference Include="Lzma" Version="1.0.0" />
       <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+      <PackageReference Include="ZstdNet" Version="1.4.5" />
     </ItemGroup>
 
 </Project>
