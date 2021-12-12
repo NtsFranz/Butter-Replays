@@ -1,16 +1,35 @@
-﻿# .milk Replay Compression Format
+﻿# .butter Replay Format
+
+The .butter format is originally based on the work on [.milk by Exhibit](https://github.com/Exhibitmark/chode/tree/master/.milk%20Replay).
+The goals of this format are as follows: 
+ - Smallest possible file size
+ - Minimal data loss
+   - Some precision is lost through lower bit length numbers
+   - Precision in timing should not be compromised
+ - Data complete
+   - All parts of the API response should be included
+
+
+## Keyframes
+In general, data for each frame in this format is only stored as a diff of the previous frame, however, a full reset happens every N frames. This allows decompression of partial replays and streaming, as well as prevents precision errors from building up over time. Keyframe intervals can be customized depending on the recording rate and use case, but keyframes cannot be spaced more than 1 minute of real time apart due to the timestamp encoding. If there is more than 1 minute between keyframes, a keyframe should automatically be inserted.
+The start of a keyframe is denoted by the `0xFEFC` header instead of the normal `0xFEFE` header.
+
+
+## Frames
+Each frame represents the data retrieved from a single call to the game's API. Any numerical value in a frame is only stored as the difference from the previous frame, except for keyframes.
 
 ### File structure
 | Bytes | Data |
 | ----- | ---- |
-| (27-45) + (18-36) * n | File Header (n=total number of players in the file |
+| (27-45) + (18-36) * n | [File Header](#file-header) (n=total number of players in the file |
+| (4) * n | [Chunk Header](#chunk-header) (N=total number of chunks |
 | ??*N | N Frames |
 
 ### File Header
 
 | Bytes | Data |
 | ----- | ---- |
-| 1  | MILK version |
+| 1  | .butter version |
 | 2  | Keyframe interval, ushort |
 | 2-20 | `client_name` ASCII string |
 | 1  | null byte |
@@ -25,15 +44,42 @@
 | .5  | `blue_round_score`   << 0 |
 | .5  | `orange_round_score` << 4 |
 | 1   | [Map Byte](#map-byte) (described below) |
+| 1   | Chunk compression method |
 
 
-## Keyframes
-In general, data for each frame in this format is only stored as a diff of the previous frame, however, a full reset happens every N frames. This allows decompression of partial replays and streaming, as well as prevents precision errors from building up over time. Keyframe intervals can be customized depending on the recording rate and use case, but keyframes cannot be spaced more than 1 minute of real time apart due to the timestamp encoding. If there is more than 1 minute between keyframes, a keyframe should automatically be inserted.
-The start of a keyframe is denoted by the `0xFEFE` header instead of the normal `0xFEFC` header. 
+### Chunk Header
+
+| Bytes | Data |
+| ----- | ---- |
+| 4  | Number of chunks (int) |
+| 4 * n  | uint for the size of each chunk in order |
 
 
-## Frames
-Each frame represents the data retrieved from a single call to the game's API. Any numerical value in a frame is only stored as the difference from the previous frame, except for keyframes.
+### Frame Data
+
+`*` denotes fields that may or may not be included as a result of the inclusion bitmasks. 
+
+| Bytes | Data |
+| ----- | ---- |
+| 2     | `0xFEFC` or `0xFEFE` static header |
+| 2, 8  | Unix time in milliseconds (long) (keyframe), or milliseconds since last frame (ushort). |
+| 2     | `game_clock` half-precision float |
+| 1     | [Inclusion bitmask](#inclusion-bitmask)
+| 1*    | `game_status` See [Game Status](#game-status-coding) table |
+| 1*    | `blue_points` |
+| 1*    | `orange_points` |
+| 5*    | [Pause and Restarts](#pause-and-restarts). |
+| 1*    | [Inputs](#inputs) |
+| 7*    | [Last Score](#last-score) No continuous data |
+| 26*   | [Last Throw](#last-throw) No continuous data |
+| 10*   | [VR Player](#vr-player)  |
+| 16*   | [Disc](#disc)  |
+| 1     | [Team data bitmask](#team-data-bitmask) |
+| ??*3  | [Team data](#team-data) (includes player data) |
+
+
+---
+
 
 ### Frame Size
 Below are estimated sizes for each frame. To get approximate full uncompressed file size, multiply the number by the number of frames. Average frame sizes are around 380 bytes experimentally.
@@ -43,24 +89,6 @@ Below are estimated sizes for each frame. To get approximate full uncompressed f
 | Keyframe      | 28    | 1112  |
 | Normal Frame  | 23    | 1106  |
 
-### Frame Data
-| Bytes | Data |
-| ----- | ---- |
-| 2     | `0xFEFC` static header |
-| 2,8   | Unix time in milliseconds (keyframe), or milliseconds since last keyframe. |
-| 2     | `game_clock` half-precision float |
-| 1     | [Inclusion bitmask](#inclusion-bitmask)
-| 1*    | `game_status` See [Game Status](#game-status-coding) table |
-| 1*    | `blue_points` |
-| 1*    | `orange_points` |
-| 5*    | [Pause and Restarts](#pause-and-restarts). |
-| 8*    | [Inputs](#inputs). |
-| 7*    | [Last Score](#last-score) No continuous data |
-| 26*   | [Last Throw](#last-throw) No continuous data |
-| 13*   | [VR Player](#vr-player)  |
-| 19*   | [Disc](#disc)  |
-| 1     | [Team data bitmask](#team-data-bitmask) |
-| ??*3  | [Team data](#team-data) (includes player data) |
 
 #### Map Byte
 Below is the bit flags structure for the Map Byte
@@ -186,7 +214,7 @@ This is three bits
  - throw_move_penalty
 
 ### Inputs
-2-byte half-precision floats for each of:
+A bitmask containing 1 bit for each of:
 - left_shoulder_pressed
 - right_shoulder_pressed
 - left_shoulder_pressed2
@@ -201,13 +229,13 @@ It would possible to eliminate the velocity component and only make use of frame
 | 2 | x position |
 | 2 | y position |
 | 2 | z position |
-| 7 | [Orientation](#orientation)
+| 4 | [Orientation](#orientation)
 | 2 | x velocity |
 | 2 | y velocity |
 | 2 | z velocity |
 
 ### VR Player
-VR player is a simple [pose](#pose) value - 13 bytes.
+VR player is a simple [pose](#pose) value - 10 bytes.
 
 ### Pose
 This is used for any position and rotation value
@@ -217,11 +245,12 @@ This is used for any position and rotation value
 | 2 | x position |
 | 2 | y position |
 | 2 | z position |
-| 7 | [Orientation](#orientation)
+| 4 | [Orientation](#orientation)
+
 
 ### Orientation
-Orientations are usually presented in the API as 3 sets of XYZ direction vectors, but this can be encoded in 7 bytes with minimal precision loss by using [smallest three](https://gafferongames.com/post/snapshot_compression/) compression.
-The orientation is converted to a Quaternion, then the component with the smallest absolute value is replaced by its index (in a byte). The other three values are recorded using 2 bytes each.
+Orientations are usually presented in the API as 3 sets of XYZ direction vectors, but this can be encoded in 4 bytes with minimal precision loss by using [smallest three](https://gafferongames.com/post/snapshot_compression/) compression.
+The orientation is converted to a Quaternion, then the component with the smallest absolute value is replaced by its index (in 2 bits). The other three values are recorded using 10 bits each.
 
 
 ### Team data bitmask
@@ -286,7 +315,7 @@ Example JSON:
 
 
 ### Player data
-4-81 bytes depending on what is included
+4-69 bytes depending on what is included
 
 | Bytes | Value |
 | ----- | ---------|
@@ -300,10 +329,10 @@ Example JSON:
 | 1*  | [Holding](#holding-indices) Right If holding a player, the userid is converted to the player's file id  (if included) |
 | 6*  | Velocity (if included)
 | 1  | [Player pose bitmask](#player-pose-bitmask) |
-| 13* | Head [Pose](#pose)
-| 13* | Body [Pose](#pose)
-| 13* | Left Hand [Pose](#pose)
-| 13* | Right Hand [Pose](#pose)
+| 10* | Head [Pose](#pose)
+| 10* | Body [Pose](#pose)
+| 10* | Left Hand [Pose](#pose)
+| 10* | Right Hand [Pose](#pose)
 
 
 ### Player state bitmask

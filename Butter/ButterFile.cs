@@ -292,7 +292,6 @@ namespace ButterReplays
 				using BinaryWriter writer = new BinaryWriter(memoryStream);
 				writer.Write(formatVersion);
 				writer.Write(keyframeInterval);
-				writer.Write(compression);
 				writer.Write(Encoding.ASCII.GetBytes(firstFrame.client_name));
 				writer.Write((byte) 0);
 				writer.Write(SessionIdToBytes(firstFrame.sessionid));
@@ -322,6 +321,8 @@ namespace ButterReplays
 				byte mapByte = firstFrame.private_match ? (byte) 1 : (byte) 0;
 				mapByte += (byte) ((byte) Enum.Parse<MapName>(firstFrame.map_name) << 1);
 				writer.Write(mapByte);
+
+				writer.Write(compression);
 
 				writer.Flush();
 				return memoryStream.ToArray();
@@ -380,6 +381,19 @@ namespace ButterReplays
 				writer.Write(IsKeyframe ? (ushort) 0xFEFC : (ushort) 0xFEFE);
 
 				lastFrameInChunk = IsKeyframe ? null : lastFrame;
+
+				Debug.Assert(lastFrameInChunk != null || IsKeyframe);
+
+				if (IsKeyframe)
+				{
+					writer.Write(frame.recorded_time.ToUnixTimeMilliseconds());
+				}
+				else
+				{
+					Debug.Assert(lastFrameInChunk != null, nameof(lastFrameInChunk) + " != null");
+					writer.Write((ushort) ((frame.recorded_time - lastFrameInChunk.frame.recorded_time)
+						.TotalMilliseconds));
+				}
 
 				writer.Write((Half) (frame.game_clock - (lastFrameInChunk?.frame.game_clock ?? 0)));
 
@@ -1181,7 +1195,6 @@ namespace ButterReplays
 					// read header
 					formatVersion = fileInput.ReadByte(),
 					keyframeInterval = fileInput.ReadUInt16(),
-					compression = fileInput.ReadByte(),
 				}
 			};
 
@@ -1223,6 +1236,8 @@ namespace ButterReplays
 			firstFrame.private_match = (mapByte & 1) == 1;
 			firstFrame.map_name = ((MapName) (mapByte >> 1)).ToString();
 			firstFrame.match_type = MatchType(firstFrame.map_name, firstFrame.private_match);
+
+			b.fileHeader.compression = fileInput.ReadByte();
 
 			// read the chunk sizes
 			uint numChunks = fileInput.ReadUInt32();
@@ -1273,10 +1288,15 @@ namespace ButterReplays
 						throw new Exception("This isn't a keyframe, but no previous keyframe found.");
 					}
 
+					DateTime time = isKeyframe
+						? DateTimeOffset.FromUnixTimeMilliseconds(input.ReadInt64()).DateTime
+						: lastKeframe.recorded_time.AddMilliseconds(input.ReadUInt16());
+
 
 					// Frame f = isKeyframe ? new Frame() : lastKeframe.Copy();
 					Frame f = new Frame
 					{
+						recorded_time = time,
 						client_name = b.fileHeader.firstFrame.client_name,
 						sessionid = b.fileHeader.firstFrame.sessionid,
 						sessionip = b.fileHeader.firstFrame.sessionip,
@@ -1292,14 +1312,9 @@ namespace ButterReplays
 					f.game_clock_display = f.game_clock.ToGameClockDisplay();
 					List<bool> inclusionBitmask = input.ReadByte().GetBitmaskValues();
 
-					if (inclusionBitmask[0])
-					{
-						f.game_status = ButterFrame.ByteToGameStatus(input.ReadByte());
-					}
-					else
-					{
-						f.game_status = lastKeframe.game_status;
-					}
+					f.game_status = inclusionBitmask[0]
+						? ButterFrame.ByteToGameStatus(input.ReadByte())
+						: lastKeframe.game_status;
 
 					if (inclusionBitmask[1])
 					{
@@ -1335,11 +1350,12 @@ namespace ButterReplays
 					// Inputs
 					if (inclusionBitmask[3])
 					{
-						byte inputByte = input.ReadByte();
-						f.left_shoulder_pressed = (inputByte & 1) > 0;
-						f.right_shoulder_pressed = (inputByte & 0b10) > 0;
-						f.left_shoulder_pressed2 = (inputByte & 0b100) > 0;
-						f.right_shoulder_pressed2 = (inputByte & 0b1000) > 0;
+						List<bool> inputs = input.ReadByte().GetBitmaskValues();
+						
+						f.left_shoulder_pressed = inputs[0];
+						f.right_shoulder_pressed = inputs[1];
+						f.left_shoulder_pressed2 = inputs[2];
+						f.right_shoulder_pressed2 = inputs[3];
 					}
 					else
 					{
@@ -1572,7 +1588,7 @@ namespace ButterReplays
 							p.body.Rotation = playerPoseBitmask[3]
 								? input.ReadSmallestThree()
 								: lastFrame.GetPlayer(p.userid).body.Rotation;
-							
+
 
 							if (playerPoseBitmask[4])
 							{
