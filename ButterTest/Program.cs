@@ -30,7 +30,8 @@ List<Frame> file = ReadFile(replayFile);
 
 ConvertToMilk(file);
 
-ConvertToButter(file);
+// ConvertToButter(file);
+StreamToButter(file);
 
 
 ReconstructFromButter(outputFolder, replayFile);
@@ -74,49 +75,71 @@ void ConvertToMilk(List<Frame> frames)
 	sw.Restart();
 }
 
+void StreamToButter(List<Frame> frames)
+{
+	ButterFile butter = new ButterFile(compressionFormat:ButterFile.CompressionFormat.none);
+
+	int lastNumChunks = 0;
+	foreach (Frame f in frames)
+	{
+		butter.AddFrame(f);
+		if (lastNumChunks != butter.NumChunks())
+		{
+			byte[] intermediateBytes = butter.GetBytes();
+			
+			File.WriteAllBytes(
+				Path.Combine(outputFolder, Path.GetFileNameWithoutExtension(replayFile) + ".butter"),
+				intermediateBytes
+			);
+		}
+		lastNumChunks = butter.NumChunks();
+	}
+	byte[] butterBytes = butter.GetBytes();
+			
+	File.WriteAllBytes(
+		Path.Combine(outputFolder, Path.GetFileNameWithoutExtension(replayFile) + ".butter"),
+		butterBytes
+	);
+}
+
 void ConvertToButter(List<Frame> frames)
 {
 	Stopwatch sw = new Stopwatch();
 	sw.Start();
 
-	ButterFile butter = new ButterFile();
-	frames.ForEach(frame => { butter.AddFrame(frame); });
 
 	sw.Stop();
 	Console.WriteLine($"Finished adding frames to Butter in {sw.Elapsed.TotalSeconds:N3} seconds");
 
-	List<int> compressionLevels = new List<int>()
+	List<ButterFile.CompressionFormat> compressionLevels = new List<ButterFile.CompressionFormat>()
 	{
 		// -1, 0, 1, 3, 7, 13, 22
-		-1, 0, 7, 22
+		ButterFile.CompressionFormat.none,
+		ButterFile.CompressionFormat.gzip,
+		ButterFile.CompressionFormat.zstd_7,
+		ButterFile.CompressionFormat.zstd_22
 	};
 	List<ushort> chunkSizes = new List<ushort>()
 	{
 		// 1, 2, 4, 8, 15, 30, 60, 120, 240, 480, 960, 1920
 		60, 300
 	};
-
-	List<bool> useZstdDict = new List<bool>()
-	{
-		// false, true
-		false
-	};
+	
 	Dictionary<string, Dictionary<string, double>> combinedSizes = new Dictionary<string, Dictionary<string, double>>();
-	foreach (int compressionLevel in compressionLevels)
+	foreach (ButterFile.CompressionFormat compressionLevel in compressionLevels)
 	{
 		foreach (ushort chunkSize in chunkSizes)
 		{
-			foreach (bool useDict in useZstdDict)
-			{
-				// const int compressionLevel = 7;
+				// const int compressionFormat = 7;
 				// const ushort chunkSize = 300;
 				// const bool useDict = false;
 
 				sw.Restart();
-				byte[] butterBytes = butter.GetBytes(compressionLevel, chunkSize, useDict,
-					out Dictionary<string, double> sizes);
+				ButterFile butter = new ButterFile(chunkSize, compressionLevel);
+				frames.ForEach(frame => { butter.AddFrame(frame); });
+				byte[] butterBytes = butter.GetBytes(out Dictionary<string, double> sizes);
 
-				string k = $"{compressionLevel}_{chunkSize}_{useDict}";
+				string k = $"{compressionLevel}_{chunkSize}";
 				combinedSizes[k] = sizes;
 
 				// Directory.CreateDirectory(Path.Combine(outputFolder, "Sizes_" + k));
@@ -140,7 +163,6 @@ void ConvertToButter(List<Frame> frames)
 
 				sw.Stop();
 				Console.WriteLine($"Finished converting to Butter in {sw.Elapsed.TotalSeconds:N3} seconds");
-			}
 		}
 	}
 
@@ -202,8 +224,8 @@ void TestQuaternions()
 
 
 	Quaternion before = new Quaternion(-0.15847519f, 0.18832426f, -0.0826531f, 0.965706f);
-// Quaternion before = new Quaternion(0,0,0,1);
-	byte[] smallestThree = ButterFile.ButterFrame.SmallestThree(before);
+	// Quaternion before = new Quaternion(0,0,0,1);
+	byte[] smallestThree = ButterFrame.SmallestThree(before);
 	using (BinaryReader rd = new BinaryReader(new MemoryStream(smallestThree)))
 	{
 		Quaternion after = rd.ReadSmallestThree();
