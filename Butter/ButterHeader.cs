@@ -20,7 +20,7 @@ namespace ButterReplays
 			public List<string> players;
 			public List<int> numbers;
 			public List<int> levels;
-			public List<ulong> userids;
+			public List<long> userids;
 
 
 			public ButterHeader(ushort keyframeInterval, ButterFile.CompressionFormat compression)
@@ -29,7 +29,7 @@ namespace ButterReplays
 				players = new List<string>();
 				numbers = new List<int>();
 				levels = new List<int>();
-				userids = new List<ulong>();
+				userids = new List<long>();
 				this.compression = compression;
 				this.keyframeInterval = keyframeInterval;
 			}
@@ -131,12 +131,12 @@ namespace ButterReplays
 				return playerIndex == 0 ? -1 : levels[playerIndex - 1];
 			}
 
-			public ulong GetUserId(byte playerIndex)
+			public long GetUserId(byte playerIndex)
 			{
 				return playerIndex == 0 ? 0 : userids[playerIndex - 1];
 			}
 
-			public byte GetPlayerIndex(ulong userId)
+			public byte GetPlayerIndex(long userId)
 			{
 				int index = userids.IndexOf(userId);
 				return (byte) (index + 1);
@@ -150,7 +150,7 @@ namespace ButterReplays
 					"none" => 255,
 					"geo" => 254,
 					"disc" => 253,
-					_ => GetPlayerIndex(ulong.Parse(holding))
+					_ => GetPlayerIndex(long.Parse(holding))
 				};
 			}
 

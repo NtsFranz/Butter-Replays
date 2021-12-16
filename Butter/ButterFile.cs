@@ -1,4 +1,6 @@
-﻿using System;
+﻿#undef ZSTD
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -7,7 +9,9 @@ using System.Linq;
 using System.Numerics;
 using System.Text;
 using EchoVRAPI;
+#if ZSTD
 using ZstdNet;
+#endif
 
 namespace ButterReplays
 {
@@ -29,7 +33,9 @@ namespace ButterReplays
 
 		private readonly List<byte[]> chunkData = new List<byte[]>();
 
+#if ZSTD
 		private readonly Compressor compressor;
+#endif
 
 		/// <summary>
 		/// Creates a new butter file instance.
@@ -41,7 +47,9 @@ namespace ButterReplays
 			header = new ButterHeader(keyframeInterval, compressionFormat);
 			if (compressionFormat.ToZstdLevel() > 0)
 			{
+#if ZSTD
 				compressor = new Compressor(new CompressionOptions(header.compression.ToZstdLevel()));
+#endif
 			}
 		}
 
@@ -183,7 +191,11 @@ namespace ButterReplays
 				case CompressionFormat.zstd_15:
 				case CompressionFormat.zstd_22:
 				case CompressionFormat.zstd_7_dict:
+#if ZSTD
 					compressed = compressor.Wrap(uncompressed);
+#else
+					throw new Exception("Zstd not available.");					
+#endif
 					break;
 				default:
 					throw new Exception("Unknown compression.");
@@ -413,7 +425,7 @@ namespace ButterReplays
 
 			for (int i = 0; i < playerCount; i++)
 			{
-				b.header.userids.Add(fileInput.ReadUInt64());
+				b.header.userids.Add(fileInput.ReadInt64());
 			}
 
 			for (int i = 0; i < playerCount; i++)
@@ -449,8 +461,10 @@ namespace ButterReplays
 
 			Frame lastKeframe = null;
 			Frame lastFrame = null;
-
+			
+#if ZSTD
 			Decompressor decompressor = new Decompressor();
+#endif
 
 			// reads one frame at a time
 			// while (!fileInput.EOF())
@@ -473,7 +487,11 @@ namespace ButterReplays
 					case CompressionFormat.zstd_15:
 					case CompressionFormat.zstd_22:
 					case CompressionFormat.zstd_7_dict:
+#if ZSTD
 						uncompressedChunk = decompressor.Unwrap(compressedChunk);
+#else
+						throw new Exception("Zstd not available.");
+#endif
 						break;
 					default:
 						throw new Exception("Compression format unknown");
@@ -941,6 +959,18 @@ namespace ButterReplays
 		{
 			List<byte> bytes = new List<byte>();
 			foreach (int val in values)
+			{
+				bytes.AddRange(BitConverter.GetBytes(val));
+			}
+
+			return bytes.ToArray();
+		}
+		
+
+		public static byte[] GetBytes(this IEnumerable<long> values)
+		{
+			List<byte> bytes = new List<byte>();
+			foreach (long val in values)
 			{
 				bytes.AddRange(BitConverter.GetBytes(val));
 			}

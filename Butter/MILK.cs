@@ -41,7 +41,7 @@ namespace ButterReplays
 			public List<string> players;
 			public List<int> numbers;
 			public List<int> levels;
-			public List<ulong> userids;
+			public List<long> userids;
 			public byte headerByte;
 
 			public MilkFileHeader(Frame frame)
@@ -68,7 +68,7 @@ namespace ButterReplays
 				players = new List<string>();
 				numbers = new List<int>();
 				levels = new List<int>();
-				userids = new List<ulong>();
+				userids = new List<long>();
 
 				foreach (Team team in frame.teams)
 				{
