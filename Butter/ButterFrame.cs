@@ -308,10 +308,9 @@ namespace ButterReplays
 					List<byte> bytes = new List<byte>();
 
 					bytes.AddRange(PoseToBytes(
-						frame.disc.position.ToVector3(),
+						frame.disc.position.ToVector3() - (lastFrameInChunk?.frame.disc.position.ToVector3() ?? Vector3.Zero),
 						frame.disc.forward.ToVector3(),
-						frame.disc.up.ToVector3(),
-						lastFrameInChunk?.frame.disc.position.ToVector3()
+						frame.disc.up.ToVector3()
 					));
 
 					bytes.AddRange((frame.disc.velocity.ToVector3() -
@@ -334,10 +333,9 @@ namespace ButterReplays
 					List<byte> bytes = new List<byte>();
 
 					bytes.AddRange(PoseToBytes(
-						frame.player.vr_position.ToVector3(),
+						frame.player.vr_position.ToVector3() - (lastFrameInChunk?.frame.player.vr_position.ToVector3() ?? Vector3.Zero),
 						frame.player.vr_forward.ToVector3(),
-						frame.player.vr_up.ToVector3(),
-						lastFrameInChunk?.frame.player.vr_position.ToVector3()
+						frame.player.vr_up.ToVector3()
 					));
 
 					_vrPlayerBytes = bytes.ToArray();
@@ -561,24 +559,24 @@ namespace ButterReplays
 				transform.up.ToVector3()
 			);
 		}
+		//
+		// public static byte[] PoseToBytes(Transform transform)
+		// {
+		// 	return PoseToBytes(
+		// 		transform.Position,
+		// 		transform.forward.ToVector3(),
+		// 		transform.up.ToVector3()
+		// 	);
+		// }
 
-		public static byte[] PoseToBytes(Transform transform)
-		{
-			return PoseToBytes(
-				transform.Position,
-				transform.forward.ToVector3(),
-				transform.up.ToVector3()
-			);
-		}
-
-		public static byte[] PoseToBytes(Vector3 pos, Vector3 forward, Vector3 up, Vector3? lastPos)
-		{
-			return PoseToBytes(
-				pos - (lastPos ?? Vector3.Zero),
-				forward,
-				up
-			);
-		}
+		// public static byte[] PoseToBytes(Vector3 pos, Vector3 forward, Vector3 up, Vector3? lastPos)
+		// {
+		// 	return PoseToBytes(
+		// 		pos - (lastPos ?? Vector3.Zero),
+		// 		forward,
+		// 		up
+		// 	);
+		// }
 
 		public static byte[] PoseToBytes(Vector3 pos, Vector3 forward, Vector3 up)
 		{
@@ -683,21 +681,22 @@ namespace ButterReplays
 			}
 
 			// This is 32 bits, which is used to store the rotation
-			int data = 0;
+			uint data = 0;
 
 			// store the index as 2 bits
 			data |= (byte)maxIndex;
 
-			float decimals = 1000f;
+			float decimals = 54161;
 
 			// store the other three components as 10-bit numbers
+			int j = 0;
 			for (int i = 0; i < 4; i++)
 			{
 				if (i != maxIndex)
 				{
 					// TODO test if these rotations are correct
-					ushort val = (ushort)(components[i] * sign * decimals + decimals / 2);
-					data |= val << ((i * 10) + 2);
+					ushort val = (ushort)((components[i] * sign +  0.70710678) / 1.41421356 * 1023);
+					data |= (uint)(val << ((j++ * 10) + 2));
 				}
 			}
 

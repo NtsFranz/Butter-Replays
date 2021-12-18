@@ -369,3 +369,11 @@ Possession, Blocking, Stunned, Invulnerable
 | `geo`      | 254        |
 | `disc`     | 253        |
 | `playerid` | The file id of the player |
+
+
+## TODO 
+
+Future optimizations:
+- Diff rotations
+- Diff body/hands relative to head
+- Reduce storage precision of diffed values if possible

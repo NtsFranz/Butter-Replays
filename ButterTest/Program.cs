@@ -24,14 +24,12 @@ if (string.IsNullOrEmpty(outputFolder))
 List<Frame> file = ReadFile(replayFile);
 
 
-ConvertToMilk(file);
+// ConvertToMilk(file);
 
 // ConvertToButter(file);
 StreamToButter(file);
 
-
 ReconstructFromButter(outputFolder, replayFile);
-
 
 // TestQuaternions();
 
@@ -165,32 +163,68 @@ void ConvertToButter(List<Frame> frames)
 	File.WriteAllText(Path.Combine(outputFolder, "butter_sizes.json"), JsonConvert.SerializeObject(combinedSizes));
 }
 
-void ReconstructFromButter(string s, string replayFile1)
+void ReconstructFromButter(string s, string replayFilename)
 {
 	Stopwatch sw = new Stopwatch();
 
-	BinaryReader binaryReader =
-		new BinaryReader(File.OpenRead(Path.Combine(s, Path.GetFileNameWithoutExtension(replayFile1) + ".butter")));
+	BinaryReader binaryReader =	new BinaryReader(File.OpenRead(Path.Combine(s, Path.GetFileNameWithoutExtension(replayFilename) + ".butter")));
 	List<Frame> rereadReplay = ButterFile.FromBytes(binaryReader);
+
+	List<string> originalJSON = new List<string>();
+	bool fileFinishedReading = false;
+
+	StreamReader fileReader = new StreamReader(replayFilename);
+	using (fileReader = EchoReplay.OpenOrExtract(fileReader))
+	{
+		while (!fileFinishedReading)
+		{
+			if (fileReader == null) continue;
+
+			string rawJson = fileReader.ReadLine();
+			if (rawJson == null)
+			{
+				fileFinishedReading = true;
+				fileReader.Close();
+			}
+			else
+			{
+				string[] splitJson = rawJson.Split('\t');
+				string onlyJson, onlyTime;
+				if (splitJson.Length == 2)
+				{
+					onlyJson = splitJson[1];
+					onlyTime = splitJson[0];
+					originalJSON.Add(onlyJson);
+				}
+				else
+				{
+					Console.WriteLine("Row doesn't include both a time and API JSON");
+					continue;
+				}
+			}
+		}
+	}
 
 	sw.Stop();
 	Console.WriteLine($"\nFinished reading from butter file in {sw.Elapsed.TotalSeconds:N3} seconds");
 	sw.Restart();
 
 	EchoReplay.SaveReplay(
-		Path.Combine(s, Path.GetFileNameWithoutExtension(replayFile1) + "_processed.echoreplay"),
+		Path.Combine(s, Path.GetFileNameWithoutExtension(replayFilename) + "_processed.echoreplay"),
 		rereadReplay);
 
-	File.WriteAllText(
-		Path.Combine(s, Path.GetFileNameWithoutExtension(replayFile1) + "_reconstructed_frame_1.json"),
-		JsonConvert.SerializeObject(rereadReplay[0]));
-	File.WriteAllText(
-		Path.Combine(s, Path.GetFileNameWithoutExtension(replayFile1) + "_reconstructed_frame_2.json"),
-		JsonConvert.SerializeObject(rereadReplay[1]));
-	File.WriteAllText(
-		Path.Combine(s, Path.GetFileNameWithoutExtension(replayFile1) + "_reconstructed_frame_10.json"),
-		JsonConvert.SerializeObject(rereadReplay[9]));
-
+	List<int> frames = new List<int>()
+	{
+		0, 2, 9, 299, 300, 301
+	};
+	foreach (int frame in frames)
+	{
+		File.WriteAllText(
+			Path.Combine(s, Path.GetFileNameWithoutExtension(replayFilename) + "_reconstructed_frame_"+frame+".json"),
+			JsonConvert.SerializeObject(rereadReplay[frame]));
+		File.WriteAllText(Path.Combine(s, Path.GetFileNameWithoutExtension(replayFilename) + "_frame_"+frame+".json"), originalJSON[frame]);		
+	}
+	
 	sw.Stop();
 	Console.WriteLine($"Finished writing to .echoreplay file in {sw.Elapsed.TotalSeconds:N3} seconds");
 	sw.Restart();
@@ -198,9 +232,28 @@ void ReconstructFromButter(string s, string replayFile1)
 
 void TestQuaternions()
 {
-	Vector3 forward = new Vector3(-0.047000002f, -0.98400003f, -0.171f);
-	Vector3 left = new Vector3(-0.89300007f, -0.035f, 0.44800001f);
-	Vector3 up = new Vector3(-0.44700003f, 0.17300001f, -0.87700003f);
+	// Vector3 forward = new Vector3(-0.047000002f, -0.98400003f, -0.171f);
+	// Vector3 left = new Vector3(-0.89300007f, -0.035f, 0.44800001f);
+	// Vector3 up = new Vector3(-0.44700003f, 0.17300001f, -0.87700003f);
+	
+	// vr_player
+	// Vector3 forward = new Vector3(-0.49500003f,-0.052000001f,0.86700004f);
+	// Vector3 left = new Vector3(0.86300004f, 0.089000002f,0.49800003f);
+	// Vector3 up = new Vector3(-0.10300001f,0.99500006f,0.001f);
+	
+	// rhand
+	Vector3 forward = new Vector3(
+		0.43200001f,
+		-0.77700001f,
+		-0.45900002f);
+	Vector3 left = new Vector3(
+		-0.80300003f,
+		-0.56300002f,
+		0.19600001f);
+	Vector3 up = new Vector3(
+		-0.41000003f,
+		0.28400001f,
+		-0.86700004f);
 
 	Quaternion q = QuaternionLookRotation(forward, up);
 
@@ -210,8 +263,8 @@ void TestQuaternions()
 	Console.WriteLine(forward - q.Forward());
 	Console.WriteLine("Left");
 	Console.WriteLine(left);
-	Console.WriteLine(Left(q));
-	Console.WriteLine(left - Left(q));
+	Console.WriteLine(q.Left());
+	Console.WriteLine(left - q.Left());
 	Console.WriteLine("Up");
 	Console.WriteLine(up);
 	Console.WriteLine(q.Up());
@@ -219,25 +272,25 @@ void TestQuaternions()
 	Console.WriteLine();
 
 
-	Quaternion before = new Quaternion(-0.15847519f, 0.18832426f, -0.0826531f, 0.965706f);
+	// Quaternion before = new Quaternion(-0.15847519f, 0.18832426f, -0.0826531f, 0.965706f);
+	Quaternion before = q;
+	// before = Quaternion.Inverse(q);
 	// Quaternion before = new Quaternion(0,0,0,1);
 	byte[] smallestThree = ButterFrame.SmallestThree(before);
-	using (BinaryReader rd = new BinaryReader(new MemoryStream(smallestThree)))
-	{
-		Quaternion after = rd.ReadSmallestThree();
-		Console.WriteLine($"{before}\n{after}");
-	}
+	using BinaryReader rd = new BinaryReader(new MemoryStream(smallestThree));
+	Quaternion after = rd.ReadSmallestThree();
+	Console.WriteLine($"{before}\n{after}\n{before-after}");
 
-	static Vector3 Left(Quaternion q)
-	{
-		return Vector3.Cross(q.Up(), q.Forward());
-	}
-
-	static Vector3 Forward(Quaternion q) => new Vector3(
-		(float) (2.0 * ((double) q.X * q.Z + (double) q.W * q.Y)),
-		(float) (2.0 * ((double) q.Y * q.Z - (double) q.W * q.X)),
-		(float) (1.0 - 2.0 * ((double) q.X * q.X + (double) q.Y * q.Y))
-	);
+	// static Vector3 Left(Quaternion q)
+	// {
+	// 	return Vector3.Cross(q.Up(), q.Forward());
+	// }
+	//
+	// static Vector3 Forward(Quaternion q) => new Vector3(
+	// 	(float) (2.0 * ((double) q.X * q.Z + (double) q.W * q.Y)),
+	// 	(float) (2.0 * ((double) q.Y * q.Z - (double) q.W * q.X)),
+	// 	(float) (1.0 - 2.0 * ((double) q.X * q.X + (double) q.Y * q.Y))
+	// );
 
 	static Quaternion QuaternionLookRotation(Vector3 forward, Vector3 up)
 	{

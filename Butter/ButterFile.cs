@@ -1,4 +1,4 @@
-﻿#undef ZSTD
+﻿#define ZSTD
 
 using System;
 using System.Collections.Generic;
@@ -131,17 +131,21 @@ namespace ButterReplays
 		// TODO complete this
 		public static string MatchType(string mapName, bool privateMatch)
 		{
-			return mapName switch
+			// "mpl_lobby_b2" => privateMatch ? "Private Match" : "Public Match",
+			switch (mapName)
 			{
-				// "mpl_lobby_b2" => privateMatch ? "Private Match" : "Public Match",
-				"mpl_arena_a" => privateMatch ? "Echo_Arena_Private" : "Unknown",
-				// "mpl_combat_fission" => privateMatch ? "Private Match" : "Public Match",
-				// "mpl_combat_combustion" => privateMatch ? "Private Match" : "Public Match",
-				// "mpl_combat_dyson" => privateMatch ? "Private Match" : "Public Match",
-				// "mpl_combat_gauss" => privateMatch ? "Private Match" : "Public Match",
-				// "mpl_tutorial_arena" => privateMatch ? "Private Match" : "Public Match",
-				_ => "Unknown"
-			};
+				case "mpl_arena_a":
+					return privateMatch ? "Echo_Arena_Private" : "Echo_Arena";
+				case "mpl_combat_fission":
+				case "mpl_combat_combustion":
+				case "mpl_combat_dyson":
+				case "mpl_combat_gauss":
+					return privateMatch ? "Echo_Combat_Private" : "Echo_Combat";
+				case "mpl_tutorial_arena":
+				case "mpl_lobby_b":
+				default:
+					return "Unknown";
+			}
 		}
 
 
@@ -160,7 +164,7 @@ namespace ButterReplays
 			ButterFrame butterFrame = new ButterFrame(frame, frameCount++, unprocessedFrames.LastOrDefault(), header);
 
 			// if chunk is finished
-			if (butterFrame.IsKeyframe)
+			if (butterFrame.IsKeyframe && unprocessedFrames.Count > 0)
 			{
 				chunkData.Add(ChunkUnprocessedFrames());
 				unprocessedFrames.Clear();
@@ -534,7 +538,7 @@ namespace ButterReplays
 						private_match = b.header.firstFrame.private_match,
 						map_name = b.header.firstFrame.map_name,
 						match_type = b.header.firstFrame.match_type,
-						game_clock = (float)input.ReadHalf() + (isKeyframe ? 0 : lastKeframe.game_clock)
+						game_clock = (float)input.ReadHalf() + (isKeyframe ? 0 : lastFrame.game_clock)
 					};
 
 					f.game_clock_display = f.game_clock.ToGameClockDisplay();
@@ -722,6 +726,7 @@ namespace ButterReplays
 								name = b.header.GetPlayerName(fileIndex),
 								playerid = input.ReadByte(),
 								level = b.header.GetPlayerLevel(fileIndex),
+								number = b.header.GetPlayerNumber(fileIndex),
 								userid = b.header.GetUserId(fileIndex),
 							};
 
@@ -1137,29 +1142,27 @@ namespace ButterReplays
 
 		public static Quaternion ReadSmallestThree(this BinaryReader reader)
 		{
-			int st = reader.ReadInt32();
+			uint st = reader.ReadUInt32();
 
-			float decimals = 1000f;
-			int maxIndex = st & 0b11;
-			float f1 = (((ushort)((st & (0b1111111111 << 2)) >> 2)) - decimals / 2) / decimals;
-			float f2 = (((ushort)((st & (0b1111111111 << 12)) >> 12)) - decimals / 2) / decimals;
-			float f3 = (((ushort)((st & (0b1111111111 << 22)) >> 22)) - decimals / 2) / decimals;
-			float f4 = MathF.Sqrt(1 - f1 * f1 - f2 * f2 - f3 * f3);
-			switch (maxIndex)
+			uint maxIndex = st & 0b11;
+			float f1 = Uncompress((st & (0b1111111111 << 2)) >> 2);
+			float f2 = Uncompress((st & (0b1111111111 << 12)) >> 12);
+			float f3 = Uncompress((st & (0b1111111111 << 22)) >> 22);
+
+			float Uncompress(float input)
 			{
-				case 0:
-					return new Quaternion(f4, f1, f2, f3);
-				case 1:
-					return new Quaternion(f1, f4, f2, f3);
-				case 2:
-					return new Quaternion(f1, f2, f4, f3);
-				case 3:
-					return new Quaternion(f1, f2, f3, f4);
-				default:
-					throw new Exception("Invalid index");
+				return (float)(input / 1023 * 1.41421356 - 0.70710678);
 			}
-
-			;
+			
+			float f4 = MathF.Sqrt(1 - f1 * f1 - f2 * f2 - f3 * f3);
+			return maxIndex switch
+			{
+				0 => new Quaternion(f4, f1, f2, f3),
+				1 => new Quaternion(f1, f4, f2, f3),
+				2 => new Quaternion(f1, f2, f4, f3),
+				3 => new Quaternion(f1, f2, f3, f4),
+				_ => throw new Exception("Invalid index")
+			};
 		}
 
 		// converts time in seconds to a string in the format "mm:ss.ms"
@@ -1170,27 +1173,6 @@ namespace ButterReplays
 			int milliseconds = (int)((time - (int)time) * 100);
 			return $"{minutes:D2}:{seconds:D2}.{milliseconds:D2}";
 		}
-
-		// // converts this quaternion to its forward vector
-		// public static Vector3 Forward(this Quaternion q)
-		// {
-		// 	return new Vector3(2 * (q.X * q.Z + q.W * q.Y), 2 * (q.Y * q.Z - q.W * q.X),
-		// 		1 - 2 * (q.X * q.X + q.Y * q.Y));
-		// }
-		//
-		// // converts this quaternion to its left vector
-		// public static Vector3 Left(this Quaternion q)
-		// {
-		// 	return new Vector3(-1 + 2 * (q.Y * q.Y + q.Z * q.Z), -2 * (q.X * q.Z + q.W * q.Y),
-		// 		2 * (q.X * q.Y - q.W * q.Z));
-		// }
-		//
-		// // converts this quaternion to its up vector
-		// public static Vector3 Up(this Quaternion q)
-		// {
-		// 	return new Vector3(2 * (q.X * q.Y - q.W * q.Z), 1 - 2 * (q.X * q.X + q.Z * q.Z),
-		// 		2 * (q.Y * q.Z + q.W * q.X));
-		// }
 
 		public static bool GetBitmaskValue(this byte b, int index)
 		{

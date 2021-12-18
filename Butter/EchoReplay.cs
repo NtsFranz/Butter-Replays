@@ -25,7 +25,7 @@ namespace ButterReplays
 						foreach (Frame f in frames)
 						{
 							string s = JsonConvert.SerializeObject(f);
-							streamWriter.WriteLine(s);
+							streamWriter.WriteLine(f.recorded_time + "\t" + s);
 						}
 					}
 				}
@@ -96,7 +96,7 @@ namespace ButterReplays
 			return readFrames;
 		}
 
-		private static StreamReader OpenOrExtract(StreamReader reader)
+		public static StreamReader OpenOrExtract(StreamReader reader)
 		{
 			char[] buffer = new char[2];
 			reader.Read(buffer, 0, buffer.Length);
