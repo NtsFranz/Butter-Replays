@@ -75,7 +75,7 @@ namespace ButterReplays
 					.TotalMilliseconds));
 			}
 
-			writer.Write((Half)(frame.game_clock - (lastFrameInChunk?.frame.game_clock ?? 0)));
+			writer.Write((float)(frame.game_clock - (lastFrameInChunk?.frame.game_clock ?? 0)));
 
 			List<bool> inclusionBits = new List<bool>()
 			{
@@ -174,11 +174,9 @@ namespace ButterReplays
 						writer.Write((byte)player.playerid);
 
 						Player lastFramePlayer = lastFrameInChunk?.frame.GetPlayer(player.userid);
-						Player lastLastFramePlayer =
-							lastFrameInChunk?.lastFrameInChunk?.frame.GetPlayer(player.userid);
+						Player lastLastFramePlayer = lastFrameInChunk?.lastFrameInChunk?.frame.GetPlayer(player.userid);
 
-						Vector3 vel = player.velocity.ToVector3() - (lastFramePlayer?.velocity.ToVector3() ??
-						                                             Vector3.Zero);
+						Vector3 vel = player.velocity.ToVector3() - (lastFramePlayer?.velocity.ToVector3() ?? Vector3.Zero);
 
 						List<bool> playerStateBitmask = new List<bool>()
 						{
@@ -219,36 +217,39 @@ namespace ButterReplays
 							writer.Write(vel.GetHalfBytes());
 						}
 
-						byte[] headBytes = PoseToBytes(player.head, lastFramePlayer?.head);
-						byte[] bodyBytes = PoseToBytes(player.body, lastFramePlayer?.body);
-						byte[] lHandBytes = PoseToBytes(player.lhand, lastFramePlayer?.lhand);
-						byte[] rHandBytes = PoseToBytes(player.rhand, lastFramePlayer?.rhand);
+						byte[] headBytes = PoseToBytes(player.head - lastFramePlayer?.head);
+						byte[] bodyBytes = PoseToBytes(player.body - lastFramePlayer?.body);
+						byte[] lHandBytes = PoseToBytes(player.lhand - lastFramePlayer?.lhand);
+						byte[] rHandBytes = PoseToBytes(player.rhand - lastFramePlayer?.rhand);
 
-						byte[] lastHeadBytes = PoseToBytes(lastFramePlayer?.head, lastLastFramePlayer?.head);
-						byte[] lastBodyBytes = PoseToBytes(lastFramePlayer?.body, lastLastFramePlayer?.body);
-						byte[] lastLHandBytes = PoseToBytes(lastFramePlayer?.lhand, lastLastFramePlayer?.lhand);
-						byte[] lastRHandBytes = PoseToBytes(lastFramePlayer?.rhand, lastLastFramePlayer?.rhand);
+						byte[] lastHeadBytes = PoseToBytes(lastFramePlayer?.head - lastLastFramePlayer?.head);
+						byte[] lastBodyBytes = PoseToBytes(lastFramePlayer?.body - lastLastFramePlayer?.body);
+						byte[] lastLHandBytes = PoseToBytes(lastFramePlayer?.lhand - lastLastFramePlayer?.lhand);
+						byte[] lastRHandBytes = PoseToBytes(lastFramePlayer?.rhand - lastLastFramePlayer?.rhand);
 
 
 						List<bool> playerPoseBitmask = new List<bool>()
 						{
-							lastFramePlayer == null ||
-							Vector3.DistanceSquared(player.head.Position, lastFramePlayer.head.Position) > .0001f,
+							// lastFramePlayer == null || Vector3.DistanceSquared(player.head.Position, lastFramePlayer.head.Position) > .0001f,
+							!headBytes.SameAs(lastHeadBytes),
 							!headBytes.Skip(6).ToArray().SameAs(lastHeadBytes?.Skip(6).ToArray()),
 
-							lastFramePlayer == null ||
-							Vector3.DistanceSquared(player.body.Position - player.head.Position,
-								lastFramePlayer.body.Position - lastFramePlayer.head.Position) > .0001f,
+							// lastFramePlayer == null ||
+							// Vector3.DistanceSquared(player.body.Position - player.head.Position,
+							// 	lastFramePlayer.body.Position - lastFramePlayer.head.Position) > .0001f,
+							!bodyBytes.SameAs(lastBodyBytes),
 							!bodyBytes.Skip(6).ToArray().SameAs(lastBodyBytes?.Skip(6).ToArray()),
 
-							lastFramePlayer == null ||
-							Vector3.DistanceSquared(player.lhand.Position - player.head.Position,
-								lastFramePlayer.lhand.Position - lastFramePlayer.head.Position) > .0001f,
+							// lastFramePlayer == null ||
+							// Vector3.DistanceSquared(player.lhand.Position - player.head.Position,
+							// 	lastFramePlayer.lhand.Position - lastFramePlayer.head.Position) > .0001f,
+							!lHandBytes.SameAs(lastLHandBytes),
 							!lHandBytes.Skip(6).ToArray().SameAs(lastLHandBytes?.Skip(6).ToArray()),
 
-							lastFramePlayer == null ||
-							Vector3.DistanceSquared(player.rhand.Position - player.head.Position,
-								lastFramePlayer.rhand.Position - lastFramePlayer.head.Position) > .0001f,
+							// lastFramePlayer == null ||
+							// Vector3.DistanceSquared(player.rhand.Position - player.head.Position,
+							// 	lastFramePlayer.rhand.Position - lastFramePlayer.head.Position) > .0001f,
+							!rHandBytes.SameAs(lastRHandBytes),
 							!rHandBytes.Skip(6).ToArray().SameAs(lastRHandBytes?.Skip(6).ToArray()),
 						};
 						writer.Write(playerPoseBitmask.GetBitmasks()[0]);
@@ -308,9 +309,8 @@ namespace ButterReplays
 					List<byte> bytes = new List<byte>();
 
 					bytes.AddRange(PoseToBytes(
-						frame.disc.position.ToVector3() - (lastFrameInChunk?.frame.disc.position.ToVector3() ?? Vector3.Zero),
-						frame.disc.forward.ToVector3(),
-						frame.disc.up.ToVector3()
+						frame.disc.Position - (lastFrameInChunk?.frame.disc.Position ?? Vector3.Zero),
+						frame.disc.Rotation
 					));
 
 					bytes.AddRange((frame.disc.velocity.ToVector3() -
@@ -333,9 +333,8 @@ namespace ButterReplays
 					List<byte> bytes = new List<byte>();
 
 					bytes.AddRange(PoseToBytes(
-						frame.player.vr_position.ToVector3() - (lastFrameInChunk?.frame.player.vr_position.ToVector3() ?? Vector3.Zero),
-						frame.player.vr_forward.ToVector3(),
-						frame.player.vr_up.ToVector3()
+						frame.player.Position - (lastFrameInChunk?.frame.player.Position ?? Vector3.Zero),
+						frame.player.Rotation
 					));
 
 					_vrPlayerBytes = bytes.ToArray();
@@ -546,41 +545,14 @@ namespace ButterReplays
 			};
 		}
 
-		public static byte[] PoseToBytes(Transform transform, Transform lastTransform)
+		
+		public static byte[] PoseToBytes(Transform transform)
 		{
-			// Quaternion rot = QuaternionLookRotation(transform.forward.ToVector3(), transform.up.ToVector3());
-			// Quaternion lastRot = QuaternionLookRotation(lastTransform.forward.ToVector3(), lastTransform.up.ToVector3());
-			// Quaternion final = new Quaternion(rot.X - lastRot.X, )
-
 			if (transform == null) return null;
 			return PoseToBytes(
-				transform.Position - (lastTransform?.Position ?? Vector3.Zero),
-				transform.forward.ToVector3(),
-				transform.up.ToVector3()
+				transform.Position,
+				transform.Rotation
 			);
-		}
-		//
-		// public static byte[] PoseToBytes(Transform transform)
-		// {
-		// 	return PoseToBytes(
-		// 		transform.Position,
-		// 		transform.forward.ToVector3(),
-		// 		transform.up.ToVector3()
-		// 	);
-		// }
-
-		// public static byte[] PoseToBytes(Vector3 pos, Vector3 forward, Vector3 up, Vector3? lastPos)
-		// {
-		// 	return PoseToBytes(
-		// 		pos - (lastPos ?? Vector3.Zero),
-		// 		forward,
-		// 		up
-		// 	);
-		// }
-
-		public static byte[] PoseToBytes(Vector3 pos, Vector3 forward, Vector3 up)
-		{
-			return PoseToBytes(pos, QuaternionLookRotation(forward, up));
 		}
 
 		public static byte[] PoseToBytes(Vector3 pos, Quaternion rot)
@@ -593,68 +565,6 @@ namespace ButterReplays
 			bytes.AddRange(SmallestThree(rot));
 
 			return bytes.ToArray();
-		}
-
-		public static Quaternion QuaternionLookRotation(Vector3 forward, Vector3 up)
-		{
-			forward /= forward.Length();
-
-			Vector3 vector = Vector3.Normalize(forward);
-			Vector3 vector2 = Vector3.Normalize(Vector3.Cross(up, vector));
-			Vector3 vector3 = Vector3.Cross(vector, vector2);
-			var m00 = vector2.X;
-			var m01 = vector2.Y;
-			var m02 = vector2.Z;
-			var m10 = vector3.X;
-			var m11 = vector3.Y;
-			var m12 = vector3.Z;
-			var m20 = vector.X;
-			var m21 = vector.Y;
-			var m22 = vector.Z;
-
-
-			float num8 = (m00 + m11) + m22;
-			var quaternion = new Quaternion();
-			if (num8 > 0f)
-			{
-				var num = (float)Math.Sqrt(num8 + 1f);
-				quaternion.W = num * 0.5f;
-				num = 0.5f / num;
-				quaternion.X = (m12 - m21) * num;
-				quaternion.Y = (m20 - m02) * num;
-				quaternion.Z = (m01 - m10) * num;
-				return quaternion;
-			}
-
-			if ((m00 >= m11) && (m00 >= m22))
-			{
-				var num7 = (float)Math.Sqrt(((1f + m00) - m11) - m22);
-				var num4 = 0.5f / num7;
-				quaternion.X = 0.5f * num7;
-				quaternion.Y = (m01 + m10) * num4;
-				quaternion.Z = (m02 + m20) * num4;
-				quaternion.W = (m12 - m21) * num4;
-				return quaternion;
-			}
-
-			if (m11 > m22)
-			{
-				var num6 = (float)Math.Sqrt(((1f + m11) - m00) - m22);
-				var num3 = 0.5f / num6;
-				quaternion.X = (m10 + m01) * num3;
-				quaternion.Y = 0.5f * num6;
-				quaternion.Z = (m21 + m12) * num3;
-				quaternion.W = (m20 - m02) * num3;
-				return quaternion;
-			}
-
-			var num5 = (float)Math.Sqrt(((1f + m22) - m00) - m11);
-			var num2 = 0.5f / num5;
-			quaternion.X = (m20 + m02) * num2;
-			quaternion.Y = (m21 + m12) * num2;
-			quaternion.Z = 0.5f * num5;
-			quaternion.W = (m01 - m10) * num2;
-			return quaternion;
 		}
 
 		public static byte[] SmallestThree(Quaternion q)
@@ -685,8 +595,6 @@ namespace ButterReplays
 
 			// store the index as 2 bits
 			data |= (byte)maxIndex;
-
-			float decimals = 54161;
 
 			// store the other three components as 10-bit numbers
 			int j = 0;

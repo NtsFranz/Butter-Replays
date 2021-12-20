@@ -25,7 +25,7 @@ namespace ButterReplays
 						foreach (Frame f in frames)
 						{
 							string s = JsonConvert.SerializeObject(f);
-							streamWriter.WriteLine(f.recorded_time + "\t" + s);
+							streamWriter.WriteLine(f.recorded_time.ToString("yyyy/MM/dd HH:mm:ss.fff") + "\t" + s);
 						}
 					}
 				}

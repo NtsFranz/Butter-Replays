@@ -463,7 +463,7 @@ namespace ButterReplays
 
 			b.header.firstFrame = firstFrame;
 
-			Frame lastKeframe = null;
+			Frame lastKeyframe = null;
 			Frame lastFrame = null;
 			
 #if ZSTD
@@ -515,14 +515,16 @@ namespace ButterReplays
 
 					bool isKeyframe = headerByte == 0xFEFC;
 
-					if (!isKeyframe && lastKeframe == null)
+					if (isKeyframe) lastFrame = null;
+
+					if (!isKeyframe && lastKeyframe == null)
 					{
 						throw new Exception("This isn't a keyframe, but no previous keyframe found.");
 					}
 
 					DateTime time = isKeyframe
 						? DateTimeOffset.FromUnixTimeMilliseconds(input.ReadInt64()).DateTime
-						: lastKeframe.recorded_time.AddMilliseconds(input.ReadUInt16());
+						: lastFrame.recorded_time.AddMilliseconds(input.ReadUInt16());
 
 
 					// Frame f = isKeyframe ? new Frame() : lastKeframe.Copy();
@@ -538,7 +540,7 @@ namespace ButterReplays
 						private_match = b.header.firstFrame.private_match,
 						map_name = b.header.firstFrame.map_name,
 						match_type = b.header.firstFrame.match_type,
-						game_clock = (float)input.ReadHalf() + (isKeyframe ? 0 : lastFrame.game_clock)
+						game_clock = (float)input.ReadSingle() + (isKeyframe ? 0 : lastFrame.game_clock)
 					};
 
 					f.game_clock_display = f.game_clock.ToGameClockDisplay();
@@ -546,7 +548,7 @@ namespace ButterReplays
 
 					f.game_status = inclusionBitmask[0]
 						? ButterFrame.ByteToGameStatus(input.ReadByte())
-						: lastKeframe.game_status;
+						: lastFrame.game_status;
 
 					if (inclusionBitmask[1])
 					{
@@ -555,8 +557,8 @@ namespace ButterReplays
 					}
 					else
 					{
-						f.blue_points = lastKeframe.blue_points;
-						f.orange_points = lastKeframe.orange_points;
+						f.blue_points = lastFrame.blue_points;
+						f.orange_points = lastFrame.orange_points;
 					}
 
 					// Pause and restarts
@@ -576,7 +578,7 @@ namespace ButterReplays
 					}
 					else
 					{
-						f.pause = lastKeframe.pause;
+						f.pause = lastFrame.pause;
 					}
 
 					// Inputs
@@ -591,10 +593,10 @@ namespace ButterReplays
 					}
 					else
 					{
-						f.left_shoulder_pressed = lastKeframe.left_shoulder_pressed;
-						f.right_shoulder_pressed = lastKeframe.right_shoulder_pressed;
-						f.left_shoulder_pressed2 = lastKeframe.left_shoulder_pressed2;
-						f.right_shoulder_pressed2 = lastKeframe.right_shoulder_pressed2;
+						f.left_shoulder_pressed = lastFrame.left_shoulder_pressed;
+						f.right_shoulder_pressed = lastFrame.right_shoulder_pressed;
+						f.left_shoulder_pressed2 = lastFrame.left_shoulder_pressed2;
+						f.right_shoulder_pressed2 = lastFrame.right_shoulder_pressed2;
 					}
 
 					// Last Score
@@ -615,7 +617,7 @@ namespace ButterReplays
 					}
 					else
 					{
-						f.last_score = lastKeframe.last_score;
+						f.last_score = lastFrame.last_score;
 					}
 
 					// Last Throw
@@ -640,7 +642,7 @@ namespace ButterReplays
 					}
 					else
 					{
-						f.last_throw = lastKeframe.last_throw;
+						f.last_throw = lastFrame.last_throw;
 					}
 
 					// VR Player
@@ -658,7 +660,7 @@ namespace ButterReplays
 					}
 					else
 					{
-						f.player = lastKeframe.player;
+						f.player = lastFrame.player;
 					}
 
 					// Disc
@@ -684,7 +686,7 @@ namespace ButterReplays
 					}
 					else
 					{
-						f.disc = lastKeframe.disc;
+						f.disc = lastFrame.disc;
 					}
 
 					byte teamDataBitmask = input.ReadByte();
@@ -775,11 +777,11 @@ namespace ButterReplays
 
 							if (playerStateBitmask[7])
 							{
-								p.velocity = input.ReadVector3Half().ToFloatArray().ToList();
+								p.velocity = (input.ReadVector3Half() + (lastFrame?.GetPlayer(p.userid)?.velocity?.ToVector3() ?? Vector3.Zero)).ToFloatArray().ToList();
 							}
 							else
 							{
-								p.velocity = lastFrame.GetPlayer(p.userid).velocity;
+								p.velocity = lastFrame?.GetPlayer(p.userid)?.velocity ?? new List<float>(){0,0,0};
 							}
 
 							List<bool> playerPoseBitmask = input.ReadByte().GetBitmaskValues();
@@ -809,8 +811,10 @@ namespace ButterReplays
 							{
 								p.body.position =
 									(input.ReadVector3Half() +
-									 (lastFrame?.GetPlayer(p.userid)?.body.Position ?? Vector3.Zero)).ToFloatArray()
-									.ToList();
+									 (lastFrame?.GetPlayer(p.userid)?.body.Position ?? Vector3.Zero)
+									 // + p.head.Position
+									 )
+									.ToFloatArray().ToList();
 							}
 							else
 							{
@@ -827,9 +831,10 @@ namespace ButterReplays
 							{
 								p.lhand.pos =
 									(input.ReadVector3Half() +
-									 (lastFrame?.GetPlayer(p.userid)?.lhand.Position ?? Vector3.Zero))
-									.ToFloatArray()
-									.ToList();
+									 (lastFrame?.GetPlayer(p.userid)?.lhand.Position ?? Vector3.Zero) 
+									 // + p.head.Position
+									 )
+									.ToFloatArray().ToList();
 							}
 							else
 							{
@@ -844,9 +849,10 @@ namespace ButterReplays
 							{
 								p.rhand.pos =
 									(input.ReadVector3Half() +
-									 (lastFrame?.GetPlayer(p.userid)?.rhand.Position ?? Vector3.Zero))
-									.ToFloatArray()
-									.ToList();
+									 (lastFrame?.GetPlayer(p.userid)?.rhand.Position ?? Vector3.Zero)
+									 // + p.head.Position
+									 )
+									.ToFloatArray().ToList();
 							}
 							else
 							{
@@ -861,7 +867,7 @@ namespace ButterReplays
 						}
 					}
 
-					if (isKeyframe) lastKeframe = f;
+					if (isKeyframe) lastKeyframe = f;
 					lastFrame = f;
 					l.Add(f);
 				}

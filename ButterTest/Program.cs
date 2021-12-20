@@ -71,7 +71,7 @@ void ConvertToMilk(List<Frame> frames)
 
 void StreamToButter(List<Frame> frames)
 {
-	ButterFile butter = new ButterFile(compressionFormat:ButterFile.CompressionFormat.none);
+	ButterFile butter = new ButterFile(compressionFormat:ButterFile.CompressionFormat.gzip);
 
 	int lastNumChunks = 0;
 	foreach (Frame f in frames)
@@ -82,7 +82,7 @@ void StreamToButter(List<Frame> frames)
 			byte[] intermediateBytes = butter.GetBytes();
 			
 			File.WriteAllBytes(
-				Path.Combine(outputFolder, Path.GetFileNameWithoutExtension(replayFile) + ".butter"),
+				Path.Combine(outputFolder, Path.GetFileNameWithoutExtension(replayFile) + ".gzip.butter"),
 				intermediateBytes
 			);
 		}
@@ -91,7 +91,7 @@ void StreamToButter(List<Frame> frames)
 	byte[] butterBytes = butter.GetBytes();
 			
 	File.WriteAllBytes(
-		Path.Combine(outputFolder, Path.GetFileNameWithoutExtension(replayFile) + ".butter"),
+		Path.Combine(outputFolder, Path.GetFileNameWithoutExtension(replayFile) + ".gzip.butter"),
 		butterBytes
 	);
 }

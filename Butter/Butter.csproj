@@ -16,14 +16,9 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="EchoVRAPI" Version="1.0.3" />
       <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
       <PackageReference Include="ZstdNet" Version="1.4.5" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Reference Include="EchoVRAPI, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
-        <HintPath>..\..\EchoVRAPI\bin\Debug\net5.0\EchoVRAPI.dll</HintPath>
-      </Reference>
     </ItemGroup>
 
 </Project>
