@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using EchoVRAPI;
@@ -59,16 +58,21 @@ namespace ButterReplays
 					else
 					{
 						string[] splitJson = rawJson.Split('\t');
-						string onlyJson, onlyTime;
-						if (splitJson.Length == 2)
+						string onlyBones = null, onlyJson, onlyTime;
+						switch (splitJson.Length)
 						{
-							onlyJson = splitJson[1];
-							onlyTime = splitJson[0];
-						}
-						else
-						{
-							Console.WriteLine("Row doesn't include both a time and API JSON");
-							continue;
+							case 3:
+								onlyBones = splitJson[2];
+								onlyJson = splitJson[1];
+								onlyTime = splitJson[0];
+								break;
+							case 2:
+								onlyJson = splitJson[1];
+								onlyTime = splitJson[0];
+								break;
+							default:
+								Console.WriteLine("Row doesn't include both a time and API JSON");
+								continue;
 						}
 
 						DateTime frameTime = DateTime.Parse(onlyTime);
@@ -79,6 +83,12 @@ namespace ButterReplays
 						try
 						{
 							Frame foundFrame = JsonConvert.DeserializeObject<Frame>(onlyJson);
+							if (onlyBones != null)
+							{
+								Bones bones = JsonConvert.DeserializeObject<Bones>(onlyBones);
+								foundFrame.bones = bones;
+							}
+
 							if (foundFrame != null)
 							{
 								foundFrame.recorded_time = frameTime;

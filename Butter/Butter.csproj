@@ -12,13 +12,31 @@
         <PackageProjectUrl>https://github.com/NtsFranz/Butter-Replays</PackageProjectUrl>
         <RepositoryUrl>https://github.com/NtsFranz/Butter-Replays</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
-        <TargetFramework>net6.0</TargetFramework>
+        <TargetFrameworks>net5.0;net6.0</TargetFrameworks>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <PackageVersion>1.0.1</PackageVersion>
+        <AssemblyVersion>1.0.1</AssemblyVersion>
+        <FileVersion>1.0.1</FileVersion>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+      <DefineConstants>TRACE; ZSTD</DefineConstants>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+      <DefineConstants>TRACE; ZSTD</DefineConstants>
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="EchoVRAPI" Version="1.0.3" />
+      <PackageReference Include="EchoVRAPI" Version="1.0.7" />
       <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
       <PackageReference Include="ZstdNet" Version="1.4.5" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Reference Include="EchoVRAPI, Version=1.0.7.0, Culture=neutral, PublicKeyToken=null">
+        <HintPath>..\..\EchoVRAPI\bin\Debug\net5.0\EchoVRAPI.dll</HintPath>
+      </Reference>
     </ItemGroup>
 
 </Project>

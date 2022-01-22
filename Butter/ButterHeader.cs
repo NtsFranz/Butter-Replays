@@ -3,29 +3,28 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using EchoVRAPI;
+using Half = SystemHalf.Half;
 
 namespace ButterReplays
 {
 		public class ButterHeader
 		{
-			public byte formatVersion = 3;
-			public readonly ushort keyframeInterval = 300;
+			public byte formatVersion = 1;
+			public readonly ushort keyframeInterval;
 
 			public readonly ButterFile.CompressionFormat compression;
 
 
 			public Frame firstFrame;
 
-			public List<ushort> chunkSizes = new List<ushort>();
-			public List<string> players;
-			public List<int> numbers;
-			public List<int> levels;
-			public List<long> userids;
+			public readonly List<string> players;
+			public readonly List<int> numbers;
+			public readonly List<int> levels;
+			public readonly List<long> userids;
 
 
 			public ButterHeader(ushort keyframeInterval, ButterFile.CompressionFormat compression)
 			{
-				chunkSizes = new List<ushort>();
 				players = new List<string>();
 				numbers = new List<int>();
 				levels = new List<int>();
@@ -204,7 +203,7 @@ namespace ButterReplays
 				writer.Write(roundScores);
 
 				byte mapByte = firstFrame.private_match ? (byte) 1 : (byte) 0;
-				mapByte += (byte) ((byte) Enum.Parse<ButterFile.MapName>(firstFrame.map_name) << 1);
+				mapByte += (byte) ((byte) Enum.Parse(typeof(ButterFile.MapName), firstFrame.map_name) << 1);
 				writer.Write(mapByte);
 
 				writer.Flush();

@@ -63,7 +63,7 @@ Each frame represents the data retrieved from a single call to the game's API. A
 | ----- | ---- |
 | 2     | `0xFEFC` or `0xFEFE` static header |
 | 2, 8  | Unix time in milliseconds (long) (keyframe), or milliseconds since last frame (ushort). |
-| 2     | `game_clock` half-precision float |
+| 4     | `game_clock` float |
 | 1     | [Inclusion bitmask](#inclusion-bitmask)
 | 1*    | `game_status` See [Game Status](#game-status-coding) table |
 | 1*    | `blue_points` |
@@ -76,6 +76,7 @@ Each frame represents the data retrieved from a single call to the game's API. A
 | 16*   | [Disc](#disc)  |
 | 1     | [Team data bitmask](#team-data-bitmask) |
 | ??*3  | [Team data](#team-data) (includes player data) |
+| 1+??     | [Bone data](#bone-data) |
 
 
 ---
@@ -371,9 +372,33 @@ Possession, Blocking, Stunned, Invulnerable
 | `playerid` | The file id of the player |
 
 
+### Bone data
+
+| Bytes | Value |
+| ----- | ---------|
+| 1-bit  | Inclusion bit for all bone data |
+| 5-bits | Number of players |
+| 2-bits | unused |
+| ??*N  | Player bone data, where N is the number of players |
+
+#### Player bone data
+
+Bone data is stored as a diff from the previous frame.
+Positions are already local to the player, so no need to convert.
+
+| Bytes | Value |
+| ----- | ---------|
+| 3  | Inclusion bitmask for this player's 23 bone positions |
+| 3  | Inclusion bitmask for this player's 23 bone rotations |
+| 0-138  | Player bone positions |
+| 0-92  | Player bone rotations as smallest-three |
+
+
+
 ## TODO 
 
 Future optimizations:
 - Diff rotations
 - Diff body/hands relative to head
 - Reduce storage precision of diffed values if possible
+- Use curve fitting for bone data

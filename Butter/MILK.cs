@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using EchoVRAPI;
+using Half = SystemHalf.Half;
 
 namespace ButterReplays
 {
@@ -37,30 +38,30 @@ namespace ButterReplays
 		/// </summary>
 		public class MilkFileHeader
 		{
-			public Frame frame;
+			public Frame firstFrame;
 			public List<string> players;
 			public List<int> numbers;
 			public List<int> levels;
 			public List<long> userids;
 			public byte headerByte;
 
-			public MilkFileHeader(Frame frame)
+			public MilkFileHeader(Frame firstFrame)
 			{
-				this.frame = frame;
+				this.firstFrame = firstFrame;
 
 				headerByte = 0;
 
-				if (frame.private_match)
+				if (firstFrame.private_match)
 				{
 					headerByte |= 1 << 0;
 				}
 
-				if (frame.match_type != "Echo Arena")
+				if (firstFrame.match_type != "Echo Arena")
 				{
 					headerByte |= 1 << 1;
 				}
 
-				if (frame.tournament_match)
+				if (firstFrame.tournament_match)
 				{
 					headerByte |= 1 << 2;
 				}
@@ -70,7 +71,7 @@ namespace ButterReplays
 				levels = new List<int>();
 				userids = new List<long>();
 
-				foreach (Team team in frame.teams)
+				foreach (Team team in firstFrame.teams)
 				{
 					if (team.players != null)
 					{
@@ -111,11 +112,11 @@ namespace ButterReplays
 				List<byte> bytes = new List<byte>();
 
 				bytes.Add(2);   // version number
-				bytes.AddRange(Encoding.ASCII.GetBytes(frame.client_name));
+				bytes.AddRange(Encoding.ASCII.GetBytes(firstFrame.client_name));
 				bytes.Add(0);
-				bytes.AddRange(Encoding.ASCII.GetBytes(frame.sessionid));
+				bytes.AddRange(Encoding.ASCII.GetBytes(firstFrame.sessionid));
 				bytes.Add(0);
-				bytes.AddRange(Encoding.ASCII.GetBytes(frame.sessionip));
+				bytes.AddRange(Encoding.ASCII.GetBytes(firstFrame.sessionip));
 				bytes.Add(0);
 				bytes.AddRange(Encoding.ASCII.GetBytes("[" + string.Join(",", players) + "]"));
 				bytes.AddRange(numbers.GetBytes());
