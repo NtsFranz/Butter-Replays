@@ -334,6 +334,7 @@ Example JSON:
 | 10* | Body [Pose](#pose)
 | 10* | Left Hand [Pose](#pose)
 | 10* | Right Hand [Pose](#pose)
+| 1*  | [Combat loadout bitmask](#combat-loadout-bitmask) (if combat) |
 
 
 ### Player state bitmask
@@ -370,6 +371,26 @@ Possession, Blocking, Stunned, Invulnerable
 | `geo`      | 254        |
 | `disc`     | 253        |
 | `playerid` | The file id of the player |
+
+
+### Combat loadout bitmask
+
+| Bit number | Field name |
+| ---------- | -----------|
+| 0-1        | `Weapon`   |
+| 2-3        | `Ordnance` |
+| 4-5        | `TacMod`   |
+| 6          | `Arm`      |
+| 7          | unused     |
+
+### Combat loadout index order
+
+| Index | Weapon  | Ordnance | TacMod | Arm |
+| ----- | --------|-------|-------|---- |
+| 0     | rocket  | stun  | sensor  | Left |
+| 1     | blaster | det   | wraith  | Right |
+| 2     | scout   | burst | heal    | |
+| 3     | assault | arc   | shield  | |
 
 
 ### Bone data

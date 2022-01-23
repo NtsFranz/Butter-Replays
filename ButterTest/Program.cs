@@ -1,4 +1,8 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Numerics;
 using Newtonsoft.Json;
 using ButterReplays;
@@ -78,13 +82,13 @@ void ConvertToMilk(List<Frame> frames)
 		milkBytes
 	);
 
-	sw.Stop();
 	Console.WriteLine($"Finished converting to Milk in {sw.Elapsed.TotalSeconds:N3} seconds");
-	sw.Restart();
 }
 
 void StreamToButter(List<Frame> frames)
 {
+	Stopwatch sw = new Stopwatch();
+	sw.Start();
 	ButterFile butter = new ButterFile(compressionFormat: ButterFile.CompressionFormat.gzip);
 
 	int lastNumChunks = 0;
@@ -96,7 +100,7 @@ void StreamToButter(List<Frame> frames)
 			byte[] intermediateBytes = butter.GetBytes();
 
 			File.WriteAllBytes(
-				Path.Combine(outputFolder, Path.GetFileNameWithoutExtension(replayFile) + ".gzip.butter"),
+				Path.Combine(outputFolder, Path.GetFileNameWithoutExtension(replayFile) + ".butter"),
 				intermediateBytes
 			);
 		}
@@ -110,6 +114,8 @@ void StreamToButter(List<Frame> frames)
 		Path.Combine(outputFolder, Path.GetFileNameWithoutExtension(replayFile) + ".gzip.butter"),
 		butterBytes
 	);
+	
+	Console.WriteLine($"Finished converting to Butter in {sw.Elapsed.TotalSeconds:N3} seconds");
 }
 
 void ConvertToButter(List<Frame> frames)
@@ -182,6 +188,7 @@ void ConvertToButter(List<Frame> frames)
 void ReconstructFromButter(string s, string replayFilename)
 {
 	Stopwatch sw = new Stopwatch();
+	sw.Start();
 
 	BinaryReader binaryReader = new BinaryReader(File.OpenRead(Path.Combine(s, Path.GetFileNameWithoutExtension(replayFilename) + ".butter")));
 	List<Frame> rereadReplay = ButterFile.FromBytes(binaryReader);
