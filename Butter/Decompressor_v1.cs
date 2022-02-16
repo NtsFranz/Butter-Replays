@@ -436,7 +436,7 @@ namespace ButterReplays
 
 							p.head.Rotation = playerPoseBitmask[1]
 								? input.ReadSmallestThree()
-								: lastFrame?.GetPlayer(p.userid).head.Rotation ?? Quaternion.Identity;
+								: lastFrame?.GetPlayer(p.userid).head.Rotation ?? UniversalUnityExtensions.UniversalQuaternionIdentity();
 
 							if (playerPoseBitmask[2])
 							{

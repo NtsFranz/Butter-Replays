@@ -9,14 +9,16 @@
         <Title>Butter Replay Format</Title>
         <Authors>NtsFranz</Authors>
         <Description>The Butter replay format is a binary compressed format built for incremental loading and minimal file size. </Description>
+        <PackageLicenseUrl>https://github.com/NtsFranz/Butter-Replays/blob/master/LICENSE</PackageLicenseUrl>
         <PackageProjectUrl>https://github.com/NtsFranz/Butter-Replays</PackageProjectUrl>
         <RepositoryUrl>https://github.com/NtsFranz/Butter-Replays</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <TargetFrameworks>net5.0;net6.0</TargetFrameworks>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-        <PackageVersion>1.0.1</PackageVersion>
-        <AssemblyVersion>1.0.1</AssemblyVersion>
-        <FileVersion>1.0.1</FileVersion>
+        <PackageVersion>1.0.3</PackageVersion>
+        <AssemblyVersion>1.0.3</AssemblyVersion>
+        <FileVersion>1.0.3</FileVersion>
+        <PackageTags>echo-vr</PackageTags>
     </PropertyGroup>
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">

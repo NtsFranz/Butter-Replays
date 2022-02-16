@@ -208,7 +208,8 @@ namespace ButterReplays
 
 			if (unprocessedFrames.Count > header.keyframeInterval)
 			{
-				throw new Exception("Chunk too large.");
+				unprocessedFrames.Clear();
+				throw new Exception("Chunk too large. Discarding all frames so this doesn't repeat.");
 			}
 
 

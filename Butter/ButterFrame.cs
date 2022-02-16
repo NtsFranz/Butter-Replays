@@ -217,7 +217,7 @@ namespace ButterReplays
 						// ping/packetloss
 						if (playerStateBitmask[5])
 						{
-							writer.Write((ushort)(player.ping - (lastFramePlayer?.ping ?? 0)));
+							writer.Write((short)(player.ping - (lastFramePlayer?.ping ?? 0)));
 							writer.WriteHalf((Half)(player.packetlossratio - (lastFramePlayer?.packetlossratio ?? 0)));
 						}
 
@@ -291,10 +291,10 @@ namespace ButterReplays
 						// Combat loadout
 						if (frame.InCombat)
 						{
-							byte loadoutByte = (byte)Enum.Parse<ButterFile.Weapon>(player.Weapon);
-							loadoutByte |= (byte)((byte) Enum.Parse<ButterFile.Ordnance>(player.Ordnance) << 2);
-							loadoutByte |= (byte)((byte) Enum.Parse<ButterFile.TacMod>(player.TacMod) << 4);
-							loadoutByte |= (byte)((byte) Enum.Parse<ButterFile.Arm>(player.Arm) << 6);
+							byte loadoutByte = (byte)Enum.Parse(typeof(ButterFile.Weapon), player.Weapon);
+							loadoutByte |= (byte)((byte) Enum.Parse(typeof(ButterFile.Ordnance), player.Ordnance) << 2);
+							loadoutByte |= (byte)((byte) Enum.Parse(typeof(ButterFile.TacMod), player.TacMod) << 4);
+							loadoutByte |= (byte)((byte) Enum.Parse(typeof(ButterFile.Arm), player.Arm) << 6);
 							writer.Write(loadoutByte);
 						}
 					}
