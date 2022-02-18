@@ -308,8 +308,8 @@ Example JSON:
  - Passes
  - Points
  - Saves
- - Shots Taken
  - Steals
+ - Shots Taken
 #### 2 bytes each:
  - Possession Time (half-precision float)
  - Stuns
@@ -355,13 +355,13 @@ Possession, Blocking, Stunned, Invulnerable
 | Bit number | Field name |
 | ---------- | -----------|
 | 0     | Head position changed |
-| 1     | Body position changed |
-| 2     | LHand position changed |
-| 3     | RHand position changed |
-| 4     | unused |
-| 5     | unused |
-| 6     | unused |
-| 7     | unused |
+| 1     | Head rotation changed |
+| 2     | Body position changed |
+| 3     | Body rotation changed |
+| 4     | LHand position changed |
+| 5     | LHand rotation changed |
+| 6     | RHand position changed |
+| 7     | RHand rotation changed |
 
 ### Holding indices
 
