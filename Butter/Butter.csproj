@@ -15,9 +15,9 @@
         <RepositoryType>git</RepositoryType>
         <TargetFrameworks>net5.0;net6.0</TargetFrameworks>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-        <PackageVersion>1.0.3</PackageVersion>
-        <AssemblyVersion>1.0.3</AssemblyVersion>
-        <FileVersion>1.0.3</FileVersion>
+        <PackageVersion>1.0.4</PackageVersion>
+        <AssemblyVersion>1.0.4</AssemblyVersion>
+        <FileVersion>1.0.4</FileVersion>
         <PackageTags>echo-vr</PackageTags>
     </PropertyGroup>
 

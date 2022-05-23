@@ -159,6 +159,8 @@ namespace ButterReplays
 					.SameAs(StatsBytes(lastFrameInChunk?.frame.teams[2].stats)),
 			};
 			writer.Write(teamDataBools.GetBitmasks()[0]);
+			
+			writer.BaseStream.Flush();
 
 
 			// add team data

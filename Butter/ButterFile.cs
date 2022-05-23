@@ -249,7 +249,7 @@ namespace ButterReplays
 			{
 				fullFileBytes.AddRange(BitConverter.GetBytes((uint)chunk.Length));
 			}
-
+			
 			byte[] tailChunk = ChunkUnprocessedFrames();
 			fullFileBytes.AddRange(BitConverter.GetBytes((uint)tailChunk.Length));
 

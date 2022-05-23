@@ -27,7 +27,7 @@ namespace ButterTest
 				List<Frame> frames = ReadFile(filename);
 				string outputFilename = Path.Combine(
 					Path.GetDirectoryName(filename) ?? throw new InvalidOperationException(),
-					Path.GetFileNameWithoutExtension(filename) + ".gzip.butter");
+					Path.GetFileNameWithoutExtension(filename) + ".none.butter");
 				StreamToButter(frames, outputFilename);
 				return true;
 			}
@@ -60,7 +60,7 @@ namespace ButterTest
 			Stopwatch sw = new Stopwatch();
 			sw.Start();
 			
-			ButterFile butter = new ButterFile(compressionFormat: ButterFile.CompressionFormat.gzip);
+			ButterFile butter = new ButterFile(compressionFormat: ButterFile.CompressionFormat.none);
 
 			int lastNumChunks = 0;
 			foreach (Frame f in frames)

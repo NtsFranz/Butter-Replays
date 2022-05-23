@@ -508,20 +508,24 @@ namespace ButterReplays
 
 					// bone data
 					byte boneHeaderByte = input.ReadByte();
-					bool bonesIncluded = (boneHeaderByte | 1) == 1;
+					bool bonesIncluded = (boneHeaderByte & 1) == 1;
 					ushort numBonePlayers = (ushort) (boneHeaderByte >> 1);
 					if (bonesIncluded)
 					{
-						f.bones = new Bones();
+						f.bones = new Bones
+						{
+							user_bones = new BonePlayer[numBonePlayers]
+						};
+						BonePlayer[] lastUserBones = lastFrame?.bones?.user_bones;
 
 						// for each player
 						for (int i = 0; i < numBonePlayers; i++)
 						{
-							f.bones.user_bones = new BonePlayer[numBonePlayers];
-							BonePlayer[] lastUserBones = lastFrame?.bones?.user_bones;
-
-							f.bones.user_bones[i].bone_o = new float[92];
-							f.bones.user_bones[i].bone_t = new float[69];
+							f.bones.user_bones[i] = new BonePlayer
+							{
+								bone_o = new float[92],
+								bone_t = new float[69]
+							};
 
 							List<bool> posInclusion = input.ReadBytes(3).GetBitmaskValues();
 							List<bool> rotInclusion = input.ReadBytes(3).GetBitmaskValues();
@@ -530,7 +534,7 @@ namespace ButterReplays
 							for (int j = 0; j < 23; j++)
 							{
 								Vector3 lastPos = UniversalUnityExtensions.UniversalVector3Zero();
-								if (lastUserBones != null)
+								if (lastUserBones?[i] != null)
 								{
 									lastPos = lastUserBones[i].GetPosition(j);
 								}
@@ -549,7 +553,7 @@ namespace ButterReplays
 							for (int j = 0; j < 23; j++)
 							{
 								Quaternion lastRot = UniversalUnityExtensions.UniversalQuaternionIdentity();
-								if (lastUserBones != null)
+								if (lastUserBones?[i] != null)
 								{
 									lastRot = lastUserBones[i].GetRotation(j);
 								}
