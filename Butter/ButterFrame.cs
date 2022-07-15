@@ -480,19 +480,20 @@ namespace ButterReplays
 				if (_lastThrowBytes == null)
 				{
 					List<byte> bytes = new List<byte>();
-					bytes.AddRange(ButterFile.GetHalfBytes((Half)frame.last_throw.arm_speed));
-					bytes.AddRange(ButterFile.GetHalfBytes((Half)frame.last_throw.total_speed));
-					bytes.AddRange(ButterFile.GetHalfBytes((Half)frame.last_throw.off_axis_spin_deg));
-					bytes.AddRange(ButterFile.GetHalfBytes((Half)frame.last_throw.wrist_throw_penalty));
-					bytes.AddRange(ButterFile.GetHalfBytes((Half)frame.last_throw.rot_per_sec));
-					bytes.AddRange(ButterFile.GetHalfBytes((Half)frame.last_throw.pot_speed_from_rot));
-					bytes.AddRange(ButterFile.GetHalfBytes((Half)frame.last_throw.speed_from_arm));
-					bytes.AddRange(ButterFile.GetHalfBytes((Half)frame.last_throw.speed_from_movement));
-					bytes.AddRange(ButterFile.GetHalfBytes((Half)frame.last_throw.speed_from_wrist));
-					bytes.AddRange(ButterFile.GetHalfBytes((Half)frame.last_throw.wrist_align_to_throw_deg));
-					bytes.AddRange(ButterFile.GetHalfBytes((Half)frame.last_throw.throw_align_to_movement_deg));
-					bytes.AddRange(ButterFile.GetHalfBytes((Half)frame.last_throw.off_axis_penalty));
-					bytes.AddRange(ButterFile.GetHalfBytes((Half)frame.last_throw.throw_move_penalty));
+					// the null check is for versions of the API before this was added
+					bytes.AddRange(ButterFile.GetHalfBytes((Half)(frame.last_throw?.arm_speed ?? 0)));
+					bytes.AddRange(ButterFile.GetHalfBytes((Half)(frame.last_throw?.total_speed ?? 0)));
+					bytes.AddRange(ButterFile.GetHalfBytes((Half)(frame.last_throw?.off_axis_spin_deg ?? 0)));
+					bytes.AddRange(ButterFile.GetHalfBytes((Half)(frame.last_throw?.wrist_throw_penalty ?? 0)));
+					bytes.AddRange(ButterFile.GetHalfBytes((Half)(frame.last_throw?.rot_per_sec ?? 0)));
+					bytes.AddRange(ButterFile.GetHalfBytes((Half)(frame.last_throw?.pot_speed_from_rot ?? 0)));
+					bytes.AddRange(ButterFile.GetHalfBytes((Half)(frame.last_throw?.speed_from_arm ?? 0)));
+					bytes.AddRange(ButterFile.GetHalfBytes((Half)(frame.last_throw?.speed_from_movement ?? 0)));
+					bytes.AddRange(ButterFile.GetHalfBytes((Half)(frame.last_throw?.speed_from_wrist ?? 0)));
+					bytes.AddRange(ButterFile.GetHalfBytes((Half)(frame.last_throw?.wrist_align_to_throw_deg ?? 0)));
+					bytes.AddRange(ButterFile.GetHalfBytes((Half)(frame.last_throw?.throw_align_to_movement_deg ?? 0)));
+					bytes.AddRange(ButterFile.GetHalfBytes((Half)(frame.last_throw?.off_axis_penalty ?? 0)));
+					bytes.AddRange(ButterFile.GetHalfBytes((Half)(frame.last_throw?.throw_move_penalty ?? 0)));
 					_lastThrowBytes = bytes.ToArray();
 				}
 
@@ -603,7 +604,7 @@ namespace ButterReplays
 				{
 					List<byte> bytes = new List<byte>();
 					bytes.AddRange(BitConverter.GetBytes(frame.rules_changed_at));
-					bytes.AddRange(Encoding.ASCII.GetBytes(frame.rules_changed_by));
+					bytes.AddRange(Encoding.ASCII.GetBytes(frame.rules_changed_by ?? ""));
 					bytes.Add(0);
 					_rulesChangedBytes = bytes.ToArray();
 				}

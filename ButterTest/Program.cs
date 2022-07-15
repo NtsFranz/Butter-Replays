@@ -9,9 +9,67 @@ using ButterReplays;
 using ButterTest;
 using EchoVRAPI;
 
+
+// get command 
 string GetArgument(IEnumerable<string> a, string option) =>
 	a.SkipWhile(i => i != option).Skip(1).Take(1).FirstOrDefault() ?? string.Empty;
 
+
+// -c convert folder - generates output filenames
+string folder = GetArgument(args, "-f");
+if (!string.IsNullOrEmpty(folder))
+{
+	if (!Directory.Exists(folder))
+	{
+		Debug.WriteLine("Not a folder");
+		return;
+	}
+
+	string outFolder = GetArgument(args, "-of");
+	if (!string.IsNullOrEmpty(outFolder))
+	{
+		if (!Directory.Exists(outFolder))
+		{
+			Directory.CreateDirectory(outFolder);
+		}
+	}
+
+	string[] files = Directory.GetFiles(folder);
+	foreach (string f in files)
+	{
+		if (!string.IsNullOrEmpty(outFolder))
+		{
+			Converter.Convert(f, outFolder);
+		}
+		else
+		{
+			Converter.Convert(f);
+		}
+	}
+
+	return;
+}
+
+// -f1 compares similarity of converted folders
+string compareF1 = GetArgument(args, "-f1");
+string compareF2 = GetArgument(args, "-f2");
+if (!string.IsNullOrEmpty(compareF1))
+{
+	var f1s = Directory.GetFiles(compareF1).ToList();
+	var f2s = Directory.GetFiles(compareF2).ToList();
+	f1s.Sort();
+	f2s.Sort();
+	for (int i = 0; i < f1s.Count; i++)
+	{
+		Console.WriteLine($"Comparing: {Path.GetFileName(f1s[i])}\t{Path.GetFileName(f2s[i])}");
+		Console.WriteLine(Compare.CompareFiles(f1s[i], f2s[i]));
+	}
+
+	return;
+}
+
+
+// -c convert filename - generates output filename
 string convert = GetArgument(args, "-c");
 if (!string.IsNullOrEmpty(convert))
 {
@@ -19,6 +77,7 @@ if (!string.IsNullOrEmpty(convert))
 	return;
 }
 
+// -i and -o input and output filenames
 string replayFile = GetArgument(args, "-i");
 string outputFolder = GetArgument(args, "-o");
 if (string.IsNullOrEmpty(replayFile))
@@ -33,7 +92,7 @@ if (string.IsNullOrEmpty(outputFolder))
 	return;
 }
 
-List<Frame> file = ReadFile(replayFile);
+List<Frame> file = Converter.ReadFile(replayFile);
 
 ButterFile bf = new ButterFile();
 bf.AddFrame(file[100]);
@@ -50,24 +109,6 @@ StreamToButter(file);
 ReconstructFromButter(outputFolder, replayFile);
 
 // TestQuaternions();
-
-
-List<Frame> ReadFile(string fileName)
-{
-	Stopwatch sw = new Stopwatch();
-	sw.Start();
-	Console.WriteLine($"Reading file: {fileName}");
-
-	sw.Restart();
-	StreamReader reader = new StreamReader(fileName);
-
-	List<Frame> frames = EchoReplay.ReadReplayFile(reader);
-	// Thread loadThread = new Thread(() => ReadReplayFile(reader));
-	// loadThread.Start();
-	sw.Stop();
-	Console.WriteLine($"Finished reading {frames.Count:N0} lines in {sw.Elapsed.TotalSeconds:N3} seconds");
-	return frames;
-}
 
 void ConvertToMilk(List<Frame> frames)
 {
@@ -114,7 +155,7 @@ void StreamToButter(List<Frame> frames)
 		Path.Combine(outputFolder, Path.GetFileNameWithoutExtension(replayFile) + ".gzip.butter"),
 		butterBytes
 	);
-	
+
 	Console.WriteLine($"Finished converting to Butter in {sw.Elapsed.TotalSeconds:N3} seconds");
 }
 
@@ -185,12 +226,14 @@ void ConvertToButter(List<Frame> frames)
 	File.WriteAllText(Path.Combine(outputFolder, "butter_sizes.json"), JsonConvert.SerializeObject(combinedSizes));
 }
 
-void ReconstructFromButter(string s, string replayFilename)
+void ReconstructFromButter(string outputFolder, string replayFilename)
 {
 	Stopwatch sw = new Stopwatch();
 	sw.Start();
 
-	BinaryReader binaryReader = new BinaryReader(File.OpenRead(Path.Combine(s, Path.GetFileNameWithoutExtension(replayFilename) + ".butter")));
+	BinaryReader binaryReader =
+		new BinaryReader(File.OpenRead(Path.Combine(outputFolder,
+			Path.GetFileNameWithoutExtension(replayFilename) + ".butter")));
 	List<Frame> rereadReplay = ButterFile.FromBytes(binaryReader);
 
 	List<string> originalJSON = new List<string>();
@@ -233,7 +276,7 @@ void ReconstructFromButter(string s, string replayFilename)
 	sw.Restart();
 
 	EchoReplay.SaveReplay(
-		Path.Combine(s, Path.GetFileNameWithoutExtension(replayFilename) + "_processed.echoreplay"),
+		Path.Combine(outputFolder, Path.GetFileNameWithoutExtension(replayFilename) + "_processed.echoreplay"),
 		rereadReplay);
 
 	List<int> frames = new List<int>()
@@ -243,9 +286,12 @@ void ReconstructFromButter(string s, string replayFilename)
 	foreach (int frame in frames)
 	{
 		File.WriteAllText(
-			Path.Combine(s, Path.GetFileNameWithoutExtension(replayFilename) + "_reconstructed_frame_" + frame + ".json"),
+			Path.Combine(outputFolder,
+				Path.GetFileNameWithoutExtension(replayFilename) + "_reconstructed_frame_" + frame + ".json"),
 			JsonConvert.SerializeObject(rereadReplay[frame]));
-		File.WriteAllText(Path.Combine(s, Path.GetFileNameWithoutExtension(replayFilename) + "_frame_" + frame + ".json"), originalJSON[frame]);
+		File.WriteAllText(
+			Path.Combine(outputFolder, Path.GetFileNameWithoutExtension(replayFilename) + "_frame_" + frame + ".json"),
+			originalJSON[frame]);
 	}
 
 	sw.Stop();

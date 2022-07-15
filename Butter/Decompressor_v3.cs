@@ -1,4 +1,7 @@
-﻿using System;
+﻿
+#undef ZSTD
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -10,6 +13,7 @@ using Transform = EchoVRAPI.Transform;
 using System.Numerics;
 #endif
 using EchoVRAPI;
+
 
 namespace ButterReplays
 {
@@ -338,11 +342,11 @@ namespace ButterReplays
 					}
 					else
 					{
-						f.contested = lastFrame.contested;
-						f.payload_checkpoint = lastFrame.payload_checkpoint;
-						f.payload_defenders = lastFrame.payload_defenders;
-						f.payload_distance = lastFrame.payload_distance;
-						f.payload_speed = lastFrame.payload_speed;
+						f.contested = lastFrame?.contested ?? false;
+						f.payload_checkpoint = lastFrame?.payload_checkpoint ?? 0;
+						f.payload_defenders = lastFrame?.payload_defenders ?? 0;
+						f.payload_distance = lastFrame?.payload_distance ?? 0;
+						f.payload_speed = lastFrame?.payload_speed ?? 0;
 					}
 
 					// Rules Changed
@@ -353,8 +357,8 @@ namespace ButterReplays
 					}
 					else
 					{
-						f.rules_changed_at = lastFrame.rules_changed_at;
-						f.rules_changed_by = lastFrame.rules_changed_by;
+						f.rules_changed_at = lastFrame?.rules_changed_at ?? 0;
+						f.rules_changed_by = lastFrame?.rules_changed_by;
 					}
 
 					byte teamDataBitmask = input.ReadByte();

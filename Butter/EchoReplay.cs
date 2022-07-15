@@ -101,9 +101,9 @@ namespace ButterReplays
 								readFrames.Add(foundFrame);
 							}
 						}
-						catch (Exception)
+						catch (Exception e)
 						{
-							Console.WriteLine("Couldn't read frame. File is corrupted.");
+							Console.WriteLine($"Couldn't read frame. File is corrupted.\n{e}");
 						}
 					}
 				}

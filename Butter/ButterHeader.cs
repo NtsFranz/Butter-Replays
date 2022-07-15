@@ -152,6 +152,7 @@ namespace ButterReplays
 				"none" => 255,
 				"geo" => 254,
 				"disc" => 253,
+				null => 252,	// for versions of the API before this was added
 				_ => GetPlayerIndex(long.Parse(holding))
 			};
 		}
@@ -163,6 +164,7 @@ namespace ButterReplays
 				255 => "none",
 				254 => "geo",
 				253 => "disc",
+				252 => null,
 				_ => GetUserId(holding).ToString()
 			};
 		}

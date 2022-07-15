@@ -288,6 +288,11 @@ namespace ButterReplays
 
 		public static List<Frame> FromBytes(BinaryReader fileInput, ref float readProgress)
 		{
+			if (fileInput.EOF())
+			{
+				return new List<Frame>();
+			}
+			
 			byte formatVersion = fileInput.ReadByte();
 			return formatVersion switch
 			{

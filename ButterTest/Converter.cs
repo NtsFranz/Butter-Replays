@@ -7,36 +7,36 @@ using EchoVRAPI;
 
 namespace ButterTest
 {
-	public class Converter
+	public static class Converter
 	{
-		public static bool Convert(string filename)
+		public static string? Convert(string filename, string? outputFolder = null)
 		{
 			if (filename.EndsWith(".butter"))
 			{
 				BinaryReader binaryReader = new BinaryReader(File.OpenRead(filename));
 				List<Frame> frames = ButterFile.FromBytes(binaryReader);
-				string outputFilename = Path.Combine(
-					Path.GetDirectoryName(filename) ?? throw new InvalidOperationException(),
+				outputFolder ??= Path.GetDirectoryName(filename) ?? throw new InvalidOperationException();
+				string outputFilename = Path.Combine(outputFolder,
 					Path.GetFileNameWithoutExtension(filename) + "_processed.echoreplay");
 				EchoReplay.SaveReplay(outputFilename, frames);
-				return true;
+				return outputFilename;
 			}
 
 			if (filename.EndsWith(".echoreplay"))
 			{
 				List<Frame> frames = ReadFile(filename);
-				string outputFilename = Path.Combine(
-					Path.GetDirectoryName(filename) ?? throw new InvalidOperationException(),
-					Path.GetFileNameWithoutExtension(filename) + ".none.butter");
+				outputFolder ??= Path.GetDirectoryName(filename) ?? throw new InvalidOperationException();
+				string outputFilename =
+					Path.Combine(outputFolder, Path.GetFileNameWithoutExtension(filename) + ".butter");
 				StreamToButter(frames, outputFilename);
-				return true;
+				return outputFilename;
 			}
 
 			Console.WriteLine("Can't convert. Unrecognized file type.");
-			return false;
+			return null;
 		}
 
-		private static List<Frame> ReadFile(string fileName)
+		public static List<Frame> ReadFile(string fileName)
 		{
 			Stopwatch sw = new Stopwatch();
 			sw.Start();
@@ -55,11 +55,11 @@ namespace ButterTest
 
 		private static void StreamToButter(List<Frame> frames, string outputFilename)
 		{
-			bool saveIntermediate = false;
-			
+			const bool saveIntermediate = false;
+
 			Stopwatch sw = new Stopwatch();
 			sw.Start();
-			
+
 			ButterFile butter = new ButterFile(compressionFormat: ButterFile.CompressionFormat.none);
 
 			int lastNumChunks = 0;
@@ -79,7 +79,7 @@ namespace ButterTest
 			byte[] butterBytes = butter.GetBytes();
 
 			File.WriteAllBytes(outputFilename, butterBytes);
-			
+
 			Console.WriteLine($"Finished converting to Butter in {sw.Elapsed.TotalSeconds:N3} seconds");
 		}
 	}
