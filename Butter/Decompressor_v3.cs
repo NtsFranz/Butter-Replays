@@ -13,9 +13,10 @@ using EchoVRAPI;
 
 namespace ButterReplays
 {
-	public static class DecompressorV2
+	public static class DecompressorV3
 	{
-		private const byte version = 2;
+		private const byte version = 3;
+
 		public static List<Frame> FromBytes(byte formatVersion, BinaryReader fileInput, ref float readProgress)
 		{
 			if (formatVersion != version)
@@ -23,11 +24,11 @@ namespace ButterReplays
 				Debug.WriteLine("Wrong version.");
 				return null;
 			}
-			
+
 			List<Frame> l = new List<Frame>();
 
 			ushort keyframeInterval = fileInput.ReadUInt16();
-			ButterFile.CompressionFormat compressionFormat = (ButterFile.CompressionFormat) fileInput.ReadByte();
+			ButterFile.CompressionFormat compressionFormat = (ButterFile.CompressionFormat)fileInput.ReadByte();
 
 			ButterFile b = new ButterFile(keyframeInterval, compressionFormat);
 			b.header.formatVersion = formatVersion;
@@ -69,7 +70,7 @@ namespace ButterReplays
 
 			byte mapByte = fileInput.ReadByte();
 			firstFrame.private_match = (mapByte & 1) == 1;
-			firstFrame.map_name = ((ButterFile.MapName) (mapByte >> 1)).ToString();
+			firstFrame.map_name = ((ButterFile.MapName)(mapByte >> 1)).ToString();
 			firstFrame.match_type = ButterFile.MatchType(firstFrame.map_name, firstFrame.private_match);
 
 
@@ -96,7 +97,7 @@ namespace ButterReplays
 			{
 				// if the last chunk is empty - nframes was divisible by chunk size
 				if (chunkSizes[chunkIndex] == 0 && chunkSizes.Length - 2 <= chunkIndex) break;
-				byte[] compressedChunk = fileInput.ReadBytes((int) chunkSizes[chunkIndex]);
+				byte[] compressedChunk = fileInput.ReadBytes((int)chunkSizes[chunkIndex]);
 				byte[] uncompressedChunk;
 				switch (b.header.compression)
 				{
@@ -147,7 +148,7 @@ namespace ButterReplays
 						: lastFrame.recorded_time.AddMilliseconds(input.ReadUInt16());
 
 
-					// Frame f = isKeyframe ? new Frame() : lastKeframe.Copy();
+					// Frame f = isKeyframe ? new Frame() : lastKeyframe.Copy();
 					Frame f = new Frame
 					{
 						recorded_time = time,
@@ -170,28 +171,57 @@ namespace ButterReplays
 						? ButterFrame.ByteToGameStatus(input.ReadByte())
 						: lastFrame?.game_status; // lastFrame could be null if this is Combat
 
-					if (inclusionBitmask[1])
+					if (inclusionBitmask[0])
 					{
-						f.blue_points = input.ReadByte();
-						f.orange_points = input.ReadByte();
+						if (f.InArena)
+						{
+							f.blue_points = input.ReadByte();
+							f.orange_points = input.ReadByte();
+						}
+						else if (f.InCombat)
+						{
+							f.blue_points = input.ReadSystemHalf();
+							f.orange_points = input.ReadSystemHalf();
+						}
+
+						// Inputs
+						List<bool> inputs = input.ReadByte().GetBitmaskValues();
+						f.left_shoulder_pressed = inputs[0];
+						f.right_shoulder_pressed = inputs[1];
+						f.left_shoulder_pressed2 = inputs[2];
+						f.right_shoulder_pressed2 = inputs[3];
 					}
 					else
 					{
-						f.blue_points = lastFrame?.blue_points ?? 0;
-						f.orange_points = lastFrame?.orange_points ?? 0;
+						if (f.InArena)
+						{
+							f.blue_points = lastFrame?.blue_points ?? 0;
+							f.orange_points = lastFrame?.orange_points ?? 0;
+						}
+						else if (f.InCombat)
+						{
+							f.blue_round_score = lastFrame?.blue_round_score ?? 0;
+							f.orange_round_score = lastFrame?.orange_round_score ?? 0;
+						}
+
+						// Inputs
+						f.left_shoulder_pressed = lastFrame.left_shoulder_pressed;
+						f.right_shoulder_pressed = lastFrame.right_shoulder_pressed;
+						f.left_shoulder_pressed2 = lastFrame.left_shoulder_pressed2;
+						f.right_shoulder_pressed2 = lastFrame.right_shoulder_pressed2;
 					}
 
 					// Pause and restarts
-					if (inclusionBitmask[2])
+					if (inclusionBitmask[1])
 					{
 						byte pauses = input.ReadByte();
 						f.blue_team_restart_request = (pauses & 0b1) > 0;
 						f.orange_team_restart_request = (pauses & 0b10) > 0;
 						f.pause = new Pause
 						{
-							paused_requested_team = ButterFrame.TeamIndexToTeam((byte) ((pauses & 0b1100) >> 2)),
-							unpaused_team = ButterFrame.TeamIndexToTeam((byte) ((pauses & 0b110000) >> 4)),
-							paused_state = ButterFrame.ByteToPausedState((byte) ((pauses & 0b11000000) >> 6)),
+							paused_requested_team = ButterFrame.TeamIndexToTeam((byte)((pauses & 0b1100) >> 2)),
+							unpaused_team = ButterFrame.TeamIndexToTeam((byte)((pauses & 0b110000) >> 4)),
+							paused_state = ButterFrame.ByteToPausedState((byte)((pauses & 0b11000000) >> 6)),
 							paused_timer = input.ReadSystemHalf(),
 							unpaused_timer = input.ReadSystemHalf(),
 						};
@@ -201,33 +231,15 @@ namespace ButterReplays
 						f.pause = lastFrame.pause;
 					}
 
-					// Inputs
-					if (inclusionBitmask[3])
-					{
-						List<bool> inputs = input.ReadByte().GetBitmaskValues();
-
-						f.left_shoulder_pressed = inputs[0];
-						f.right_shoulder_pressed = inputs[1];
-						f.left_shoulder_pressed2 = inputs[2];
-						f.right_shoulder_pressed2 = inputs[3];
-					}
-					else
-					{
-						f.left_shoulder_pressed = lastFrame.left_shoulder_pressed;
-						f.right_shoulder_pressed = lastFrame.right_shoulder_pressed;
-						f.left_shoulder_pressed2 = lastFrame.left_shoulder_pressed2;
-						f.right_shoulder_pressed2 = lastFrame.right_shoulder_pressed2;
-					}
-
 					// Last Score
-					if (inclusionBitmask[4])
+					if (inclusionBitmask[2])
 					{
 						byte lastScoreByte = input.ReadByte();
 						f.last_score = new LastScore
 						{
-							team = ButterFrame.TeamIndexToTeam((byte) (lastScoreByte & 0b11)),
+							team = ButterFrame.TeamIndexToTeam((byte)(lastScoreByte & 0b11)),
 							point_amount = (lastScoreByte & 0b100) > 0 ? 3 : 2,
-							goal_type = ((ButterFile.GoalType) ((lastScoreByte & 0b11111000) >> 3)).ToString()
+							goal_type = ((ButterFile.GoalType)((lastScoreByte & 0b11111000) >> 3)).ToString()
 								.Replace("_", " "),
 							person_scored = b.header.GetPlayerName(input.ReadByte()),
 							assist_scored = b.header.GetPlayerName(input.ReadByte()),
@@ -241,7 +253,7 @@ namespace ButterReplays
 					}
 
 					// Last Throw
-					if (inclusionBitmask[5])
+					if (inclusionBitmask[3])
 					{
 						f.last_throw = new LastThrow
 						{
@@ -266,7 +278,7 @@ namespace ButterReplays
 					}
 
 					// VR Player
-					if (inclusionBitmask[6])
+					if (inclusionBitmask[4])
 					{
 						(Vector3 p, Quaternion q) = input.ReadPose();
 						p += lastFrame?.player.Position ?? UniversalUnityExtensions.UniversalVector3Zero();
@@ -284,7 +296,7 @@ namespace ButterReplays
 					}
 
 					// Disc
-					if (inclusionBitmask[7])
+					if (inclusionBitmask[5])
 					{
 						(Vector3 p, Quaternion q) = input.ReadPose();
 
@@ -313,6 +325,36 @@ namespace ButterReplays
 					else
 					{
 						f.disc = lastFrame?.disc;
+					}
+
+					// Combat Payload State
+					if (inclusionBitmask[6])
+					{
+						f.contested = input.ReadBoolean();
+						f.payload_checkpoint = input.ReadByte();
+						f.payload_defenders = input.ReadByte();
+						f.payload_distance = input.ReadSystemHalf();
+						f.payload_speed = input.ReadSystemHalf();
+					}
+					else
+					{
+						f.contested = lastFrame.contested;
+						f.payload_checkpoint = lastFrame.payload_checkpoint;
+						f.payload_defenders = lastFrame.payload_defenders;
+						f.payload_distance = lastFrame.payload_distance;
+						f.payload_speed = lastFrame.payload_speed;
+					}
+
+					// Rules Changed
+					if (inclusionBitmask[7])
+					{
+						f.rules_changed_at = input.ReadInt64();
+						f.rules_changed_by = input.ReadASCIIString();
+					}
+					else
+					{
+						f.rules_changed_at = lastFrame.rules_changed_at;
+						f.rules_changed_by = lastFrame.rules_changed_by;
 					}
 
 					byte teamDataBitmask = input.ReadByte();
@@ -363,8 +405,9 @@ namespace ButterReplays
 							p.blocking = playerStateBitmask[1];
 							p.stunned = playerStateBitmask[2];
 							p.invulnerable = playerStateBitmask[3];
+							p.is_emote_playing = playerStateBitmask[4];
 
-							if (playerStateBitmask[4])
+							if (playerStateBitmask[5])
 							{
 								p.stats = input.ReadStats();
 								Stats oldStats = lastFrame?.GetPlayer(p.userid)?.stats;
@@ -378,21 +421,11 @@ namespace ButterReplays
 								p.stats = lastFrame?.GetPlayer(p.userid)?.stats;
 							}
 
-							if (playerStateBitmask[5])
-							{
-								p.ping = input.ReadInt16() + (lastFrame?.GetPlayer(p.userid)?.ping ?? 0);
-								p.packetlossratio = input.ReadSystemHalf() +
-								                    (lastFrame?.GetPlayer(p.userid)?.packetlossratio ?? 0);
-							}
-							else
-							{
-								p.ping = lastFrame.GetPlayer(p.userid).ping;
-								p.packetlossratio = lastFrame.GetPlayer(p.userid).packetlossratio;
-							}
-
 							if (playerStateBitmask[6])
 							{
-								if (!f.InCombat)
+								p.ping = input.ReadInt16() + (lastFrame?.GetPlayer(p.userid)?.ping ?? 0);
+								p.packetlossratio = input.ReadSystemHalf() + (lastFrame?.GetPlayer(p.userid)?.packetlossratio ?? 0);
+								if (f.InArena)
 								{
 									p.holding_left = b.header.ByteToHolding(input.ReadByte());
 									p.holding_right = b.header.ByteToHolding(input.ReadByte());
@@ -400,7 +433,9 @@ namespace ButterReplays
 							}
 							else
 							{
-								if (!f.InCombat)
+								p.ping = lastFrame.GetPlayer(p.userid).ping;
+								p.packetlossratio = lastFrame.GetPlayer(p.userid).packetlossratio;
+								if (f.InArena)
 								{
 									p.holding_left = lastFrame.GetPlayer(p.userid).holding_left;
 									p.holding_right = lastFrame.GetPlayer(p.userid).holding_right;
@@ -409,14 +444,11 @@ namespace ButterReplays
 
 							if (playerStateBitmask[7])
 							{
-								p.velocity =
-									(input.ReadVector3Half() + (lastFrame?.GetPlayer(p.userid)?.velocity?.ToVector3() ??
-									                            UniversalUnityExtensions.UniversalVector3Zero()))
-									.ToFloatArray().ToList();
+								p.velocity = (input.ReadVector3Half() + (lastFrame?.GetPlayer(p.userid)?.velocity?.ToVector3() ?? UniversalUnityExtensions.UniversalVector3Zero())).ToFloatArray().ToList();
 							}
 							else
 							{
-								p.velocity = lastFrame?.GetPlayer(p.userid)?.velocity ?? new List<float>() {0, 0, 0};
+								p.velocity = lastFrame?.GetPlayer(p.userid)?.velocity ?? new List<float>() { 0, 0, 0 };
 							}
 
 							List<bool> playerPoseBitmask = input.ReadByte().GetBitmaskValues();
@@ -504,10 +536,10 @@ namespace ButterReplays
 							if (f.InCombat)
 							{
 								byte loadoutByte = input.ReadByte();
-								p.Weapon = ((ButterFile.Weapon) ((loadoutByte & (0b11 << 0)) >> 0)).ToString();
-								p.Ordnance = ((ButterFile.Ordnance) ((loadoutByte & (0b11 << 2)) >> 2)).ToString();
-								p.TacMod = ((ButterFile.TacMod) ((loadoutByte & (0b11 << 4)) >> 4)).ToString();
-								p.Arm = ((ButterFile.Arm) ((loadoutByte & (0b1 << 6)) >> 6)).ToString();
+								p.Weapon = ((ButterFile.Weapon)((loadoutByte & (0b11 << 0)) >> 0)).ToString();
+								p.Ordnance = ((ButterFile.Ordnance)((loadoutByte & (0b11 << 2)) >> 2)).ToString();
+								p.TacMod = ((ButterFile.TacMod)((loadoutByte & (0b11 << 4)) >> 4)).ToString();
+								p.Arm = ((ButterFile.Arm)((loadoutByte & (0b1 << 6)) >> 6)).ToString();
 							}
 
 							f.teams[i].players.Add(p);
@@ -517,7 +549,7 @@ namespace ButterReplays
 					// bone data
 					byte boneHeaderByte = input.ReadByte();
 					bool bonesIncluded = (boneHeaderByte & 1) == 1;
-					ushort numBonePlayers = (ushort) (boneHeaderByte >> 1);
+					ushort numBonePlayers = (ushort)(boneHeaderByte >> 1);
 					if (bonesIncluded)
 					{
 						f.bones = new Bones
@@ -584,7 +616,7 @@ namespace ButterReplays
 					l.Add(f);
 				}
 
-				readProgress = (float) chunkIndex / numChunks;
+				readProgress = (float)chunkIndex / numChunks;
 			}
 
 			return l;
