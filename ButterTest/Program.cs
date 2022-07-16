@@ -15,8 +15,8 @@ string GetArgument(IEnumerable<string> a, string option) =>
 	a.SkipWhile(i => i != option).Skip(1).Take(1).FirstOrDefault() ?? string.Empty;
 
 
-// -c convert folder - generates output filenames
-string folder = GetArgument(args, "-f");
+// -if -of convert folder - generates output filenames
+string folder = GetArgument(args, "-if");
 if (!string.IsNullOrEmpty(folder))
 {
 	if (!Directory.Exists(folder))
@@ -55,8 +55,8 @@ string compareF1 = GetArgument(args, "-f1");
 string compareF2 = GetArgument(args, "-f2");
 if (!string.IsNullOrEmpty(compareF1))
 {
-	var f1s = Directory.GetFiles(compareF1).ToList();
-	var f2s = Directory.GetFiles(compareF2).ToList();
+	List<string> f1s = Directory.GetFiles(compareF1).ToList();
+	List<string> f2s = Directory.GetFiles(compareF2).ToList();
 	f1s.Sort();
 	f2s.Sort();
 	for (int i = 0; i < f1s.Count; i++)

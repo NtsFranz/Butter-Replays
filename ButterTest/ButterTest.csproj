@@ -13,9 +13,6 @@
 
     <ItemGroup>
       <Reference Include="EchoVRAPI, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
-        <HintPath>..\..\EchoVRAPI\bin\Debug\net6.0\EchoVRAPI.dll</HintPath>
-      </Reference>
-      <Reference Include="EchoVRAPI, Version=1.0.7.0, Culture=neutral, PublicKeyToken=null">
         <HintPath>..\..\EchoVRAPI\bin\Debug\net5.0\EchoVRAPI.dll</HintPath>
       </Reference>
     </ItemGroup>
