@@ -18,12 +18,15 @@ namespace ButterTest
 			Frame diffFrame = Frame.CreateEmpty();
 			Frame maxFrame = Frame.CreateEmpty();
 
+			Console.WriteLine("Reading File 1");
 			StreamReader r1 = new StreamReader(file1);
 			List<Frame> f1 = EchoReplay.ReadReplayFile(r1);
 
+			Console.WriteLine("Reading File 2");
 			StreamReader r2 = new StreamReader(file2);
 			List<Frame> f2 = EchoReplay.ReadReplayFile(r2);
 
+			Console.WriteLine("Comparing");
 			if (f1.Count != f2.Count)
 			{
 				return "Frame count not the same";

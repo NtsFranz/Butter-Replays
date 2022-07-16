@@ -564,8 +564,8 @@ namespace ButterReplays
 					pauses |= (byte)((frame.orange_team_restart_request ? 1 : 0) << 1);
 					pauses |= (byte)(TeamToTeamIndex(frame.pause.paused_requested_team) << 2);
 					pauses |= (byte)(TeamToTeamIndex(frame.pause.unpaused_team) << 4);
-					pauses |= (byte)(PausedStateToByte(frame.pause.paused_state) << 6);
 					bytes.Add(pauses);
+					bytes.Add(PausedStateToByte(frame.pause.paused_state));
 
 					bytes.AddRange(ButterFile.GetHalfBytes((Half)(frame.pause.paused_timer - lastFrameInChunk?.frame.pause.paused_timer ?? 0)));
 					bytes.AddRange(ButterFile.GetHalfBytes((Half)(frame.pause.unpaused_timer - lastFrameInChunk?.frame.pause.unpaused_timer ?? 0)));
@@ -645,7 +645,7 @@ namespace ButterReplays
 		}
 
 		/// <summary>
-		/// This is only 2 bits
+		/// This is only 3 bits
 		/// </summary>
 		public static byte PausedStateToByte(string team)
 		{
@@ -654,14 +654,15 @@ namespace ButterReplays
 				"unpaused" => 0,
 				"paused" => 1,
 				"unpausing" => 2,
-				"pausing" => 3, // TODO exists?
-				_ => 3
+				"pausing" => 3,	// TODO exists?
+				"none" => 4,	// for Combat
+				_ => 5
 			};
 		}
 
 
 		/// <summary>
-		/// This is only 2 bits
+		/// This is only 3 bits
 		/// </summary>
 		public static string ByteToPausedState(byte b)
 		{
@@ -670,7 +671,8 @@ namespace ButterReplays
 				0 => "unpaused",
 				1 => "paused",
 				2 => "unpausing",
-				3 => "pausing", // TODO exists?
+				3 => "pausing",	// TODO exists?
+				4 => "none",	// for Combat
 				_ => "NOT FOUND"
 			};
 		}

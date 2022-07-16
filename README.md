@@ -70,7 +70,7 @@ Each frame represents the data retrieved from a single call to the game's API. A
 | 1* / 2* | Arena: `blue_points` 1 byte / Combat: `blue_points` 2-byte Half                         |
 | 1* / 2* | Arena: `orange_points` 1 byte / Combat: `orange_points` 2-byte Half                     |                                       |
 | 1*      | [Inputs](#inputs)                                                                       |
-| 5*      | [Pause and Restarts](#pause-and-restarts).                                              |
+| 6*      | [Pause and Restarts](#pause-and-restarts).                                              |
 | 7*      | [Last Score](#last-score) No continuous data                                            |
 | 26*     | [Last Throw](#last-throw) No continuous data                                            |
 | 10*     | [VR Player](#vr-player)                                                                 |
@@ -120,7 +120,7 @@ Below is the bit flags structure for the Map Byte
 | Bit | Value                                       | Bytes Saved    |
 |-----|---------------------------------------------|----------------|
 | 0   | `game_status` / blue/orange points / Inputs | 1+2a/4c+1      |
-| 1   | Pause and restarts                          | 5              |
+| 1   | Pause and restarts                          | 6              |
 | 2   | Last Score                                  | 7              |
 | 3   | Last Throw                                  | 26             |
 | 4   | VR Player                                   | 10             |
@@ -152,20 +152,22 @@ Below is the bit flags structure for the Map Byte
 | 1      | `orange_team_restart_request`                                   |
 | 2-3    | `paused_requested_team` See [Team indices](#team-indices) table |
 | 4-5    | `unpaused_team` See [Team indices](#team-indices) table         |
-| 6-7    | `paused_state` See [Paused state](#paused-state) table          |
+| 1-byte | `paused_state` See [Paused state](#paused-state) table          |
 | 2-byte | `paused_timer`                                                  |
 | 2-byte | `unpaused_timer`                                                |
 
 ### Paused state
 
-This is two bits
+This is 1 byte, but it only needs 3 bits
 
-| Index | Value      |
-|-------|------------|
-| 0     | unpaused   |
-| 1     | paused     |
-| 2     | unpausing  |
-| 3     | pausing??? |
+| Index | Value         |
+|-------|---------------|
+| 0     | unpaused      |
+| 1     | paused        |
+| 2     | unpausing     |
+| 3     | pausing???    |
+| 4     | none (Combat) |
+| 5     | unknown       |
 
 ### Team indices
 

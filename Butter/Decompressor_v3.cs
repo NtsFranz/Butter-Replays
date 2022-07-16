@@ -225,7 +225,7 @@ namespace ButterReplays
 						{
 							paused_requested_team = ButterFrame.TeamIndexToTeam((byte)((pauses & 0b1100) >> 2)),
 							unpaused_team = ButterFrame.TeamIndexToTeam((byte)((pauses & 0b110000) >> 4)),
-							paused_state = ButterFrame.ByteToPausedState((byte)((pauses & 0b11000000) >> 6)),
+							paused_state = ButterFrame.ByteToPausedState(input.ReadByte()),
 							paused_timer = input.ReadSystemHalf(),
 							unpaused_timer = input.ReadSystemHalf(),
 						};
