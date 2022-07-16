@@ -244,7 +244,7 @@ namespace ButterReplays
 						{
 							writer.Write((short)(player.ping - (lastFramePlayer?.ping ?? 0)));
 							writer.WriteHalf((Half)(player.packetlossratio - (lastFramePlayer?.packetlossratio ?? 0)));
-							if (!frame.InCombat)
+							if (frame.InArena)
 							{
 								writer.Write(butterHeader.HoldingToByte(player.holding_left));
 								writer.Write(butterHeader.HoldingToByte(player.holding_right));

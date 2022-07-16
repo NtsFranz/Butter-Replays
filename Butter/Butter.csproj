@@ -9,15 +9,19 @@
         <Title>Butter Replay Format</Title>
         <Authors>NtsFranz</Authors>
         <Description>The Butter replay format is a binary compressed format built for incremental loading and minimal file size. </Description>
-        <PackageLicenseUrl>https://github.com/NtsFranz/Butter-Replays/blob/master/LICENSE</PackageLicenseUrl>
+        <PackageLicenseFile>LICENSE</PackageLicenseFile>
         <PackageProjectUrl>https://github.com/NtsFranz/Butter-Replays</PackageProjectUrl>
         <RepositoryUrl>https://github.com/NtsFranz/Butter-Replays</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <TargetFrameworks>net5.0;net6.0</TargetFrameworks>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-        <PackageVersion>1.3.2</PackageVersion>
+        <PackageVersion>1.3.3</PackageVersion>
         <PackageTags>echo-vr</PackageTags>
     </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="..\LICENSE" Pack="true" PackagePath=""/>
+    </ItemGroup>
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
       <DefineConstants>TRACE; ZSTD</DefineConstants>
@@ -30,12 +34,7 @@
     <ItemGroup>
       <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
       <PackageReference Include="ZstdNet" Version="1.4.5" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <Reference Include="EchoVRAPI, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
-            <HintPath>..\..\EchoVRAPI\bin\Debug\net5.0\EchoVRAPI.dll</HintPath>
-        </Reference>
+      <PackageReference Include="EchoVRAPI" Version="1.1.2" />
     </ItemGroup>
 
 </Project>

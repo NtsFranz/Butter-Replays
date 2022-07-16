@@ -120,7 +120,7 @@ namespace ButterReplays
 
 		public string GetPlayerName(byte playerIndex)
 		{
-			return playerIndex == 0 ? "INVALID PLAYER" : players[playerIndex - 1];
+			return playerIndex == 0 ? "[INVALID]" : players[playerIndex - 1];
 		}
 
 		public int GetPlayerLevel(byte playerIndex)
@@ -153,7 +153,7 @@ namespace ButterReplays
 				"geo" => 254,
 				"disc" => 253,
 				null => 252,	// for versions of the API before this was added
-				_ => GetPlayerIndex(long.Parse(holding))
+				_ => byte.Parse(holding)
 			};
 		}
 
@@ -165,7 +165,7 @@ namespace ButterReplays
 				254 => "geo",
 				253 => "disc",
 				252 => null,
-				_ => GetUserId(holding).ToString()
+				_ => holding.ToString()
 			};
 		}
 

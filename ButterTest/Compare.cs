@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Numerics;
@@ -42,59 +43,89 @@ namespace ButterTest
 		{
 			foreach (FieldInfo field in f1.GetType().GetFields())
 			{
-				if (field.GetValue(f1).IsNumber())
-				{
-					double diff = Math.Abs(field.GetValue(f1).ToDouble() - field.GetValue(f2).ToDouble());
-					double max = field.GetValue(maxFrame).ToDouble();
-					if (diff > max)
-					{
-						field.SetValue(maxFrame, Convert.ChangeType(diff, field.FieldType));
-					}
-
-					field.SetValue(diffFrame, Convert.ChangeType(diff, field.FieldType));
-				}
-
-				if (field.GetValue(f1).IsSubType())
-				{
-					ProgrammaticDiff(field.GetValue(f1), field.GetValue(f2), field.GetValue(diffFrame), field.GetValue(maxFrame));
-				}
+				if (Attribute.IsDefined(field, typeof(JsonIgnoreAttribute))) continue;
+				CompareField(
+					f1, f2, diffFrame, maxFrame,
+					field.GetValue(f1), field.GetValue(f2), field.GetValue(diffFrame), field.GetValue(maxFrame),
+					field
+				);
 			}
 
 			foreach (PropertyInfo field in f1.GetType().GetProperties())
 			{
 				if (Attribute.IsDefined(field, typeof(JsonIgnoreAttribute))) continue;
+				CompareField(
+					f1, f2, diffFrame, maxFrame,
+					field.GetValue(f1), field.GetValue(f2), field.GetValue(diffFrame), field.GetValue(maxFrame),
+					field
+				);
+			}
+		}
 
-				if (field.GetValue(f1).IsNumber())
+		private static void CompareField<T>(T f1, T f2, T diffFrame, T maxFrame,
+			object f1Val, object f2Val, object diffFrameVal, object maxFrameVal,
+			MemberInfo field)
+		{
+			if (f1.IsNumber())
+			{
+				double diff = Math.Abs(f1Val.ToDouble() - f2Val.ToDouble());
+				double max = maxFrameVal.ToDouble();
+				if (diff > max)
 				{
-					double diff = Math.Abs(field.GetValue(f1).ToDouble() - field.GetValue(f2).ToDouble());
-					double max = field.GetValue(maxFrame).ToDouble();
-					if (diff > max)
+					if (field is PropertyInfo fInfo1)
 					{
-						field.SetValue(maxFrame, Convert.ChangeType(diff, field.PropertyType));
+						fInfo1.SetValue(maxFrame, Convert.ChangeType(diff, fInfo1.PropertyType));
 					}
-
-					field.SetValue(diffFrame, Convert.ChangeType(diff, field.PropertyType));
+					else if (field is FieldInfo fInfo3)
+					{
+						fInfo3.SetValue(maxFrame, Convert.ChangeType(diff, fInfo3.FieldType));
+					}
 				}
 
-				if (field.GetValue(f1).IsSubType())
+				if (field is PropertyInfo fInfo2)
 				{
-					ProgrammaticDiff(field.GetValue(f1), field.GetValue(f2), field.GetValue(diffFrame), field.GetValue(maxFrame));
+					fInfo2.SetValue(diffFrame, Convert.ChangeType(diff, fInfo2.PropertyType));
 				}
+				else if (field is FieldInfo fInfo4)
+				{
+					fInfo4.SetValue(diffFrame, Convert.ChangeType(diff, fInfo4.FieldType));
+				}
+			}
 
-				if (field.GetValue(f1) is List<Team>)
+			if (f1Val is string)
+			{
+				if (f1Val as string != f2Val as string)
 				{
-					ListDiff(field.GetValue(f1) as List<Team>, field.GetValue(f2) as List<Team>, field.GetValue(diffFrame) as List<Team>, field.GetValue(maxFrame) as List<Team>);
+					if (
+						f1Val != "BLUE TEAM" &&
+						f1Val != "ORANGE TEAM" &&
+						f1Val != "SPECTATORS" &&
+						(f1Val != "[INVALID]" && f2Val != null)
+					)
+					{
+						Console.WriteLine($"{f1Val as string} != {f2Val as string}");
+					}
 				}
-				
-				if (field.GetValue(f1) is List<Player>)
-				{
-					ListDiff(field.GetValue(f1) as List<Player>, field.GetValue(f2) as List<Player>, field.GetValue(diffFrame) as List<Player>, field.GetValue(maxFrame) as List<Player>);
-				}
-				
-				if (field.GetValue(f1) is List<float>)
-				{
-					ListDiff(field.GetValue(f1) as List<float>, field.GetValue(f2) as List<float>, field.GetValue(diffFrame) as List<float>, field.GetValue(maxFrame) as List<float>);
-				}
+			}
+
+			if (f1Val.IsSubType())
+			{
+				ProgrammaticDiff(f1Val, f2Val, diffFrameVal, maxFrameVal);
+			}
+
+			if (f1Val is List<Team>)
+			{
+				ListDiff(f1Val as List<Team>, f2Val as List<Team>, diffFrameVal as List<Team>, maxFrameVal as List<Team>);
+			}
+
+			if (f1Val is List<Player>)
+			{
+				ListDiff(f1Val as List<Player>, f2Val as List<Player>, diffFrameVal as List<Player>, maxFrameVal as List<Player>);
+			}
+
+			if (f1Val is List<float>)
+			{
+				ListDiff(f1Val as List<float>, f2Val as List<float>, diffFrameVal as List<float>, maxFrameVal as List<float>);
 			}
 		}
 

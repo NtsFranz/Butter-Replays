@@ -6,9 +6,10 @@ The goals of this format are as follows:
 - Smallest possible file size
 - Minimal data loss
     - Some precision is lost through lower bit length numbers
-    - Precision in timing should not be compromised
+    - Precision in timing of events should not be compromised
 - Data complete
     - All parts of the API response should be included
+    - Currently team names are intentionally not included
 
 ## Keyframes
 
